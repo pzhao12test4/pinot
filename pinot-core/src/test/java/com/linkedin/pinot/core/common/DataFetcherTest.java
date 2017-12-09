@@ -26,12 +26,10 @@ import com.linkedin.pinot.core.indexsegment.generator.SegmentGeneratorConfig;
 import com.linkedin.pinot.core.operator.BaseOperator;
 import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
 import com.linkedin.pinot.core.segment.index.loader.Loaders;
-import com.linkedin.pinot.util.GenericRowRecordReader;
+import com.linkedin.pinot.util.TestDataRecordReader;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import org.apache.commons.io.FileUtils;
@@ -67,8 +65,9 @@ public class DataFetcherTest {
   private DataFetcher _dataFetcher;
 
   @BeforeClass
-  private void setup() throws Exception {
-    List<GenericRow> rows = new ArrayList<>(NUM_ROWS);
+  private void setup()
+      throws Exception {
+    GenericRow[] segmentData = new GenericRow[NUM_ROWS];
 
     // Generate random dimension and metric values.
     for (int i = 0; i < NUM_ROWS; i++) {
@@ -91,7 +90,7 @@ public class DataFetcherTest {
       map.put(NO_DICT_DOUBLE_METRIC_NAME, _doubleMetricValues[i]);
       GenericRow genericRow = new GenericRow();
       genericRow.init(map);
-      rows.add(genericRow);
+      segmentData[i] = genericRow;
     }
 
     // Create an index segment with the random dimension and metric values.
@@ -116,7 +115,7 @@ public class DataFetcherTest {
             NO_DICT_DOUBLE_METRIC_NAME));
 
     SegmentIndexCreationDriverImpl driver = new SegmentIndexCreationDriverImpl();
-    driver.init(config, new GenericRowRecordReader(rows, schema));
+    driver.init(config, new TestDataRecordReader(schema, segmentData));
     driver.build();
 
     IndexSegment indexSegment = Loaders.IndexSegment.load(new File(INDEX_DIR_PATH, SEGMENT_NAME), ReadMode.heap);

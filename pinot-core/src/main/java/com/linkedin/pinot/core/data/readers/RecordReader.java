@@ -17,39 +17,67 @@ package com.linkedin.pinot.core.data.readers;
 
 import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.core.data.GenericRow;
-import java.io.Closeable;
-import java.io.IOException;
+import java.util.Map;
+import org.apache.commons.lang.mutable.MutableLong;
 
 
 /**
- * The <code>RecordReader</code> interface is used to read records from various file formats into {@link GenericRow}s.
- * Pinot segments will be generated from {@link GenericRow}s.
+ * Generic interface to implement any new file format in which
+ * input data can be read and converted into segments.
+ *
+ *
  */
-public interface RecordReader extends Closeable {
+
+public interface RecordReader {
 
   /**
-   * Return <code>true</code> if more records remain to be read.
+   *
+   * @throws Exception
    */
-  boolean hasNext();
+  public void init() throws Exception;
 
   /**
-   * Get the next record.
+   * Rewind is called in case we need to iterate through
+   * the input data again.. Once such case would be when
+   * we need to create a dictionary. Cannot call this if
+   * close is called first
+   *
+   * @throws Exception
    */
-  GenericRow next() throws IOException;
+  public void rewind() throws Exception;
 
   /**
-   * Get the next record. Re-use the given row if possible to reduce garbage.
-   * <p>The passed in row should be returned by previous call to {@link #next()}.
+   *
+   * @return
    */
-  GenericRow next(GenericRow reuse) throws IOException;
+  public boolean hasNext();
 
   /**
-   * Rewind the reader to start reading from the first record again.
+   *
+   * @return
    */
-  void rewind() throws IOException;
+  public Schema getSchema();
 
   /**
-   * Get the Pinot schema.
+   *
+   * @return
    */
-  Schema getSchema();
+  public GenericRow next();
+
+  /**
+   *
+   * @return
+   */
+  public GenericRow next(GenericRow row);
+
+  /**
+   * Get the map of fields that have null values.
+   */
+  public Map<String, MutableLong> getNullCountMap();
+
+  /**
+   *
+   * @throws Exception
+   */
+  public void close() throws Exception;
 }

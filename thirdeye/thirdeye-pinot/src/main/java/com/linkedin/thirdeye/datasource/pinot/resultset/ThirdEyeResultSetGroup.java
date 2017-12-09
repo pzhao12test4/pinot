@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.linkedin.pinot.client.ResultSet;
 import com.linkedin.pinot.client.ResultSetGroup;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
@@ -13,12 +13,12 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  * to Pinot's {@link ResultSet}).
  */
 public class ThirdEyeResultSetGroup {
-  private ImmutableList<ThirdEyeResultSet> resultSets = ImmutableList.of();
-
-  public ThirdEyeResultSetGroup() { }
+  private List<ThirdEyeResultSet> resultSets = Collections.emptyList();
 
   public ThirdEyeResultSetGroup(List<ThirdEyeResultSet> resultSets) {
-    this.setResultSets(resultSets);
+    if (resultSets != null) {
+      this.resultSets = ImmutableList.copyOf(resultSets);
+    }
   }
 
   public int size() {
@@ -27,14 +27,6 @@ public class ThirdEyeResultSetGroup {
 
   public ThirdEyeResultSet get(int idx) {
     return resultSets.get(idx);
-  }
-
-  public void setResultSets(List<ThirdEyeResultSet> resultSets) {
-    if (CollectionUtils.isNotEmpty(resultSets)) {
-      this.resultSets = ImmutableList.copyOf(resultSets);
-    } else {
-      this.resultSets = ImmutableList.of();
-    }
   }
 
   public List<ThirdEyeResultSet> getResultSets() {

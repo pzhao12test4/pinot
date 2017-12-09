@@ -18,9 +18,7 @@
 
 import Ember from 'ember';
 import moment from 'moment';
-import fetch from 'fetch';
-import { toFilters, toFilterMap, filterPrefix } from 'thirdeye-frontend/helpers/utils';
-import _ from 'lodash'
+import { toFilters, toFilterMap } from '../../../helpers/utils';
 
 // TODO: move this to a utils file (DRYER)
 const _filterToUrn = (filters) => {
@@ -45,21 +43,12 @@ const serverDateFormat = 'YYYY-MM-DD HH:mm';
 
 export default Ember.Component.extend({
   onChange: null,
-  onSelection: null,
   urnString: null,
+  anomalyRangeStart: null,
+  anomalyRangeEnd: null,
   analysisRangeStart: null,
   analysisRangeEnd: null,
 
-
-  /**
-   * Formatted max date
-   * @return {String}
-   */
-  datePickerMaxDate: Ember.computed({
-    get() {
-      return moment().endOf('day');
-    }
-  }),
 
   /**
    * Formatted anomaly start date
@@ -69,7 +58,7 @@ export default Ember.Component.extend({
     get() {
       const start = this.get('anomalyRangeStart');
 
-      return moment(start).format(serverDateFormat);
+      return start ? moment(+start).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
 
@@ -81,15 +70,78 @@ export default Ember.Component.extend({
     get() {
       const end = this.get('anomalyRangeEnd');
 
-      return moment(end).format(serverDateFormat);
+      return end ? moment(+end).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
+
+  /**
+   * Formatted analysis start date
+   * @return {String}
+   */
+  datePickerAnalysisRangeStart: Ember.computed('analysisRangeStart', {
+    get() {
+      const start = this.get('analysisRangeStart');
+
+      return start ? moment(+start).format(serverDateFormat) : moment().format(serverDateFormat);
+    }
+  }),
+
+  /**
+   * Formatted analysis end date
+   * @return {String}
+   */
+  datePickerAnalysisRangeEnd: Ember.computed('analysisRangeEnd', {
+    get() {
+      const end = this.get('analysisRangeEnd');
+
+      return end ? moment(+end).format(serverDateFormat) : moment().format(serverDateFormat);
+    }
+  }),
+
+  /**
+   * Selected Granularity
+   * @type {String}
+   */
+  granularity: null,
+
+  /**
+   * Granularities Options
+   * @type {String[]}
+   */
+  granularityOptions: Ember.computed.reads('config.granularityOptions'),
+  /**
+   * Compare Mode Options
+   * @type {String[]}
+   */
+  compareModeOptions: Ember.computed.reads('config.compareModeOptions'),
 
   /**
    * filter options
    * @type {Object}
    */
-  filterOptions: {},
+  filterOptions: Ember.computed.reads('config.filterOptions'),
+
+  /**
+   * Selected Compare Mode
+   * @type {String}
+   */
+  compareMode: 'WoW',
+
+  /**
+   * Predefined Custom Ranges for
+   * the display region
+   * @type {Object}
+   */
+  predefinedAnalysisRanges: {
+    'Last 2 days': [
+      moment().subtract(3, 'days').startOf('day'),
+      moment().subtract(1, 'days').endOf('day')
+    ],
+    'Last 7 days': [
+      moment().subtract(7, 'days').startOf('day'),
+      moment().subtract(1, 'days').endOf('day')
+    ]
+  },
 
   /**
    * Selected filters
@@ -98,35 +150,56 @@ export default Ember.Component.extend({
   filters: JSON.stringify({}),
 
   /**
-   * Selected primary metric(s)
-   * @type {Number}
+   * Indicates the unit of the granularity
+   * @type {String}
    */
-  primaryMetricUrn: Ember.computed('otherUrns', function () {
-    const otherUrns = this.get('otherUrns');
-    const metricUrns = filterPrefix(otherUrns, 'thirdeye:metric:');
+  granularityUnit: Ember.computed('granularity', function () {
+    const granularity = this.get('granularity');
+    const units = ['MINUTES', 'HOURS', 'DAYS'];
 
-    if (_.isEmpty(metricUrns)) { return null; }
+    for (let i = 0; i < units.length; i++) {
+      if (granularity.endsWith(units[i])) {
+        return units[i];
+      }
+    }
 
-    return metricUrns[0];
+    return 'MINUTES';
   }),
 
   /**
-   * filter options
-   * @type {Object}
+   * Indicates the date format to be used based on granularityUnit
+   * @type {String}
    */
-  filterOptionsObserver: Ember.observer('otherUrns', function () {
-    // TODO anti pattern - refactor into separate component?
+  uiDateFormat: Ember.computed('granularityUnit', function () {
+    const granularityUnit = this.get('granularityUnit');
 
-    const otherUrns = this.get('otherUrns');
-    const metricUrns = filterPrefix(otherUrns, 'thirdeye:metric:');
-
-    if (_.isEmpty(metricUrns)) { return {}; }
-
-    const id = metricUrns[0].split(':')[2];
-    return fetch(`/data/autocomplete/filters/metric/${id}`)
-      .then(res => res.json())
-      .then(res => this.set('filterOptions', res));
+    switch (granularityUnit) {
+      case 'DAYS':
+        return 'MMM D, YYYY';
+      case 'HOURS':
+        return 'MMM D, YYYY h a';
+      default:
+        return 'MMM D, YYYY hh:mm a';
+    }
   }),
+
+  /**
+   * Indicates the allowed date range picker increment based on granularityUnit
+   * @type {Number}
+   */
+  timePickerIncrement: Ember.computed('granularityUnit', function () {
+    const granularityUnit = this.get('granularityUnit');
+
+    switch (granularityUnit) {
+      case 'DAYS':
+        return 1440;
+      case 'HOURS':
+        return 60;
+      default:
+        return 5;
+    }
+  }),
+
 
   /**
    * Parses the context and sets component's props
@@ -148,11 +221,25 @@ export default Ember.Component.extend({
       otherUrns,
       anomalyRangeStart: anomalyRange[0], anomalyRangeEnd: anomalyRange[1],
       analysisRangeStart: analysisRange[0], analysisRangeEnd: analysisRange[1],
+      granularity,
+      compareMode,
       filters
     });
   },
 
+  init() {
+    this._super(...arguments);
+
+    this._updateFromContext();
+  },
+
   didReceiveAttrs() {
+    this._super(...arguments);
+
+    this._updateFromContext();
+  },
+
+  didInsertElement() {
     this._super(...arguments);
 
     this._updateFromContext();
@@ -168,25 +255,32 @@ export default Ember.Component.extend({
       const {
         anomalyRangeStart,
         anomalyRangeEnd,
+        analysisRangeStart,
+        analysisRangeEnd,
+        granularity,
         filters,
-        otherUrns,
-        context
+        compareMode,
+        otherUrns
       } = this.getProperties(
         'otherUrns',
+        'granularity',
         'filters',
         'anomalyRangeStart',
         'anomalyRangeEnd',
-        'context');
+        'compareMode',
+        'analysisRangeStart',
+        'analysisRangeEnd');
       const onChange = this.get('onChange');
 
-      const filterUrns = _filterToUrn(filters);
 
-      const newContext = Object.assign({}, context, {
-        urns: new Set([...otherUrns, ...filterUrns]),
-        anomalyRange: [moment(anomalyRangeStart).valueOf(), moment(anomalyRangeEnd).valueOf()]
-      });
-
-      onChange(newContext);
+      if (onChange != null) {
+        const filterUrns = _filterToUrn(filters);
+        const urns = new Set([...otherUrns, ...filterUrns]);
+        const anomalyRange = [parseInt(anomalyRangeStart), parseInt(anomalyRangeEnd)];
+        const analysisRange = [parseInt(analysisRangeStart), parseInt(analysisRangeEnd)];
+        const newContext = { urns, anomalyRange, analysisRange, granularity, compareMode };
+        onChange(newContext);
+      }
     },
 
     /**
@@ -208,6 +302,47 @@ export default Ember.Component.extend({
     },
 
     /**
+     * Sets the new display date in ms
+     * @method setDisplayDateRange
+     * @param {String} start  - stringified start date
+     * @param {String} end    - stringified end date
+     * @return {undefined}
+     */
+    setDisplayDateRange(start, end) {
+      const analysisRangeStart = moment(start).valueOf();
+      const analysisRangeEnd = moment(end).valueOf();
+
+      this.setProperties({
+        analysisRangeStart,
+        analysisRangeEnd
+      });
+      this.send('updateContext');
+    },
+
+
+    /**
+     * Updates the compare mode
+     * @method onModeChange
+     * @param {String} compareMode baseline compare mode
+     * @return {undefined}
+     */
+    onModeChange(compareMode) {
+      this.set('compareMode', compareMode);
+      this.send('updateContext');
+    },
+
+    /**
+     * Updates the granularity
+     * @method onGranularityChange
+     * @param {String} granularity the selected granularity
+     * @return {undefined}
+     */
+    onGranularityChange(granularity) {
+      this.set('granularity', granularity);
+      this.send('updateContext');
+    },
+
+    /**
      * Updates the filters
      * @method onFiltersChange
      * @param {Object} filters currently selected filters
@@ -215,28 +350,6 @@ export default Ember.Component.extend({
      */
     onFiltersChange(filters) {
       this.set('filters', filters);
-      this.send('updateContext');
-    },
-
-    /**
-     * Updates the primary metric(s)
-     * @method onMetricSelection
-     * @param {Object} updates metric selection/deselection
-     * @return {undefined}
-     */
-    onMetricSelection(updates) {
-      const { onSelection, otherUrns } = this.getProperties('onSelection', 'otherUrns');
-
-      if (onSelection) {
-        onSelection(updates);
-      }
-
-      const selected = filterPrefix(Object.keys(updates), 'thirdeye:metric:').filter(urn => updates[urn]);
-
-      const nonMetricUrns = [...otherUrns].filter(urn => !urn.startsWith('thirdeye:metric:'));
-      const newOtherUrns = [...nonMetricUrns, ...selected];
-
-      this.set('otherUrns', newOtherUrns);
       this.send('updateContext');
     }
   }

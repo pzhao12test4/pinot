@@ -1,13 +1,18 @@
+mode
+| <button {{action (mut timeseriesMode) "absolute"}}>absolute</button>
+| <button {{action (mut timeseriesMode) "relative"}}>relative</button>
+| <button {{action (mut timeseriesMode) "log"}}>log</button>
+| <button {{action (mut timeseriesMode) "split"}}>split</button>
+
 {{#if isSplit}}
   {{#each splitUrns as |urn|}}
     <div>
-      <h4>{{get-safe splitLabels urn}}</h4>
+      <h4>{{get splitLabels urn}}</h4>
       {{timeseries-chart
         series=(get splitSeries urn)
         tooltip=tooltip
         legend=legend
         axis=axis
-        subchart=splitSubchart
       }}
     </div>
   {{/each}}
@@ -17,6 +22,5 @@
     tooltip=tooltip
     legend=legend
     axis=axis
-    subchart=subchart
   }}
 {{/if}}

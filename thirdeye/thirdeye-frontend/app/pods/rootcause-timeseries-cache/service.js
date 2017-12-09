@@ -15,6 +15,7 @@ export default Ember.Service.extend({
   },
 
   request(requestContext, urns) {
+    console.log('rootcauseTimeseriesService: request()', requestContext, urns);
     const { context, timeseries, pending } = this.getProperties('context', 'timeseries', 'pending');
 
     const metrics = [...urns].filter(urn => urn.startsWith('frontend:metric:'));
@@ -28,11 +29,11 @@ export default Ember.Service.extend({
       // new analysis range: evict all, reload, keep stale copy of incoming
       missing = metrics;
       newPending = new Set(metrics);
-      newTimeseries = metrics.filter(urn => urn in timeseries).reduce((agg, urn) => { agg[urn] = timeseries[urn]; return agg; }, {});
+      newTimeseries = metrics.filter(urn => timeseries[urn]).reduce((agg, urn) => { agg[urn] = timeseries[urn]; return agg; }, {});
 
     } else {
       // same context: load missing
-      missing = metrics.filter(urn => !(urn in timeseries) && !pending.has(urn));
+      missing = metrics.filter(urn => !timeseries[urn] && !pending.has(urn));
       newPending = new Set([...pending].concat(missing));
       newTimeseries = timeseries;
     }
@@ -40,7 +41,7 @@ export default Ember.Service.extend({
     this.setProperties({ context: _.cloneDeep(requestContext), timeseries: newTimeseries, pending: newPending });
 
     if (_.isEmpty(missing)) {
-      // console.log('rootcauseTimeseriesService: request: all metrics up-to-date. ignoring.');
+      console.log('rootcauseTimeseriesService: request: all metrics up-to-date. ignoring.');
       return;
     }
 
@@ -57,21 +58,23 @@ export default Ember.Service.extend({
   },
 
   _complete(requestContext, incoming) {
+    console.log('rootcauseTimeseriesService: _complete()', incoming);
     const { context, pending, timeseries } = this.getProperties('context', 'pending', 'timeseries');
 
     // only accept latest result
     if (!_.isEqual(context, requestContext)) {
-      // console.log('rootcauseTimeseriesService: _complete: received stale result. ignoring.');
+      console.log('rootcauseTimeseriesService: _complete: received stale result. ignoring.');
       return;
     }
 
-    const newPending = new Set([...pending].filter(urn => !(urn in incoming)));
+    const newPending = new Set([...pending].filter(urn => !incoming[urn]));
     const newTimeseries = Object.assign({}, timeseries, incoming);
 
     this.setProperties({ timeseries: newTimeseries, pending: newPending });
   },
 
   _extractTimeseries(json, urn) {
+    console.log('rootcauseTimeseriesService: _extractTimeseries()', json);
     const timeseries = {};
     Object.keys(json).forEach(range =>
       Object.keys(json[range]).filter(sid => sid != 'timestamp').forEach(sid => {
@@ -112,13 +115,16 @@ export default Ember.Service.extend({
     const metricId = urn.split(':')[3];
     const metricFilters = toFilters([urn]);
     const contextFilters = toFilters(filterPrefix(context.urns, 'thirdeye:dimension:'));
+    console.log('rootcauseTimeseriesCache: _fetchSlice: metricFilters', metricFilters);
+    console.log('rootcauseTimeseriesCache: _fetchSlice: contextFilters', contextFilters);
     const filters = toFilterMap(metricFilters.concat(contextFilters));
 
     const filterString = encodeURIComponent(JSON.stringify(filters));
 
     const url = `/timeseries/query?metricIds=${metricId}&ranges=${range[0]}:${range[1]}&filters=${filterString}&granularity=${context.granularity}`;
     return fetch(url)
-      .then(checkStatus)
+    // .then(checkStatus)
+      .then(res => res.json())
       .then(res => this._extractTimeseries(res, urn))
       .then(res => offsetFunc(res))
       .then(res => this._complete(context, res));

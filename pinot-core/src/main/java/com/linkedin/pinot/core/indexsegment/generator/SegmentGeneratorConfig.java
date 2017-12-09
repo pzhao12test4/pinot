@@ -25,10 +25,10 @@ import com.linkedin.pinot.common.data.TimeFieldSpec;
 import com.linkedin.pinot.core.data.readers.CSVRecordReaderConfig;
 import com.linkedin.pinot.core.data.readers.FileFormat;
 import com.linkedin.pinot.core.data.readers.RecordReaderConfig;
+import com.linkedin.pinot.core.indexsegment.utils.AvroUtils;
 import com.linkedin.pinot.core.segment.DefaultSegmentNameGenerator;
 import com.linkedin.pinot.core.segment.SegmentNameGenerator;
 import com.linkedin.pinot.core.segment.creator.impl.V1Constants;
-import com.linkedin.pinot.core.util.AvroUtils;
 import com.linkedin.pinot.startree.hll.HllConfig;
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +54,6 @@ import org.slf4j.LoggerFactory;
 /**
  * Configuration properties used in the creation of index segments.
  */
-@SuppressWarnings("unused")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SegmentGeneratorConfig {
   public enum TimeColumnType {
@@ -85,6 +84,7 @@ public class SegmentGeneratorConfig {
   private String _readerConfigFile = null;
   private RecordReaderConfig _readerConfig = null;
   private boolean _enableStarTreeIndex = false;
+  private String _starTreeIndexSpecFile = null;
   private StarTreeIndexSpec _starTreeIndexSpec = null;
   private String _creatorVersion = null;
   private char _paddingCharacter = V1Constants.Str.DEFAULT_STRING_PAD_CHAR;
@@ -130,6 +130,7 @@ public class SegmentGeneratorConfig {
     _readerConfigFile = config._readerConfigFile;
     _readerConfig = config._readerConfig;
     _enableStarTreeIndex = config._enableStarTreeIndex;
+    _starTreeIndexSpecFile = config._starTreeIndexSpecFile;
     _starTreeIndexSpec = config._starTreeIndexSpec;
     _creatorVersion = config._creatorVersion;
     _paddingCharacter = config._paddingCharacter;
@@ -337,10 +338,13 @@ public class SegmentGeneratorConfig {
     if (_segmentTimeUnit != null) {
       return _segmentTimeUnit;
     } else {
-      TimeFieldSpec timeFieldSpec = _schema.getTimeFieldSpec();
-      if (timeFieldSpec != null) {
-        // Outgoing granularity is always non-null.
-        return timeFieldSpec.getOutgoingGranularitySpec().getTimeType();
+      if (_schema.getTimeFieldSpec() != null) {
+        if (_schema.getTimeFieldSpec().getOutgoingGranularitySpec() != null) {
+          return _schema.getTimeFieldSpec().getOutgoingGranularitySpec().getTimeType();
+        }
+        if (_schema.getTimeFieldSpec().getIncomingGranularitySpec() != null) {
+          return _schema.getTimeFieldSpec().getIncomingGranularitySpec().getTimeType();
+        }
       }
       return TimeUnit.DAYS;
     }
@@ -429,17 +433,24 @@ public class SegmentGeneratorConfig {
     return _enableStarTreeIndex;
   }
 
-  /**
-   * Enable star tree generation.
-   * @param starTreeIndexSpec Indexing spec for star tree. If null, then default values are used.
-   */
-  public void enableStarTreeIndex(StarTreeIndexSpec starTreeIndexSpec) {
-    _enableStarTreeIndex = true;
-    _starTreeIndexSpec = starTreeIndexSpec;
+  public void setEnableStarTreeIndex(boolean enableStarTreeIndex) {
+    _enableStarTreeIndex = enableStarTreeIndex;
+  }
+
+  public String getStarTreeIndexSpecFile() {
+    return _starTreeIndexSpecFile;
+  }
+
+  public void setStarTreeIndexSpecFile(String starTreeIndexSpecFile) {
+    _starTreeIndexSpecFile = starTreeIndexSpecFile;
   }
 
   public StarTreeIndexSpec getStarTreeIndexSpec() {
     return _starTreeIndexSpec;
+  }
+
+  public void setStarTreeIndexSpec(StarTreeIndexSpec starTreeIndexSpec) {
+    _starTreeIndexSpec = starTreeIndexSpec;
   }
 
   public HllConfig getHllConfig() {
@@ -507,6 +518,10 @@ public class SegmentGeneratorConfig {
     if (_readerConfigFile != null) {
       setReaderConfig(objectMapper.readValue(new File(_readerConfigFile), CSVRecordReaderConfig.class));
     }
+
+    if (_starTreeIndexSpecFile != null) {
+      setStarTreeIndexSpec(objectMapper.readValue(new File(_starTreeIndexSpecFile), StarTreeIndexSpec.class));
+    }
   }
 
   @JsonIgnore
@@ -530,7 +545,7 @@ public class SegmentGeneratorConfig {
   /**
    * Returns a comma separated list of qualifying field name strings
    * @param type FieldType to filter on
-   * @return Comma separate qualifying fields names.
+   * @return
    */
   @JsonIgnore
   private String getQualifyingFields(FieldType type) {

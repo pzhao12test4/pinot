@@ -15,6 +15,7 @@ export default Ember.Service.extend({
   },
 
   request(requestContext, urns) {
+    console.log('rootcauseBreakdownsService: request()', requestContext, urns);
     const { context, breakdowns, pending } = this.getProperties('context', 'breakdowns', 'pending');
 
     const metrics = [...urns].filter(urn => urn.startsWith('frontend:metric:'));
@@ -28,11 +29,11 @@ export default Ember.Service.extend({
       // new analysis range: evict all, reload, keep stale copy of incoming
       missing = metrics;
       newPending = new Set(metrics);
-      newBreakdowns = metrics.filter(urn => urn in breakdowns).reduce((agg, urn) => { agg[urn] = breakdowns[urn]; return agg; }, {});
+      newBreakdowns = metrics.filter(urn => breakdowns[urn]).reduce((agg, urn) => { agg[urn] = breakdowns[urn]; return agg; }, {});
 
     } else {
       // same context: load missing
-      missing = metrics.filter(urn => !(urn in breakdowns) && !pending.has(urn));
+      missing = metrics.filter(urn => !breakdowns[urn] && !pending.has(urn));
       newPending = new Set([...pending].concat(missing));
       newBreakdowns = breakdowns;
     }
@@ -40,7 +41,7 @@ export default Ember.Service.extend({
     this.setProperties({ context: _.cloneDeep(requestContext), breakdowns: newBreakdowns, pending: newPending });
 
     if (_.isEmpty(missing)) {
-      // console.log('rootcauseBreakdownsService: request: all metrics up-to-date. ignoring.');
+      console.log('rootcauseBreakdownsService: request: all metrics up-to-date. ignoring.');
       return;
     }
 
@@ -55,15 +56,16 @@ export default Ember.Service.extend({
   },
 
   _complete(requestContext, incoming) {
+    console.log('rootcauseBreakdownsService: _complete()', incoming);
     const { context, pending, breakdowns } = this.getProperties('context', 'pending', 'breakdowns');
 
     // only accept latest result
     if (!_.isEqual(context, requestContext)) {
-      // console.log('rootcauseBreakdownsService: _complete: received stale result. ignoring.');
+      console.log('rootcauseBreakdownsService: _complete: received stale result. ignoring.');
       return;
     }
 
-    const newPending = new Set([...pending].filter(urn => !(urn in incoming)));
+    const newPending = new Set([...pending].filter(urn => !incoming[urn]));
     const newBreakdowns = Object.assign({}, breakdowns, incoming);
 
     this.setProperties({ breakdowns: newBreakdowns, pending: newPending });
@@ -74,7 +76,8 @@ export default Ember.Service.extend({
     const breakdowns = {};
     Object.keys(incoming).forEach(range => {
       Object.keys(incoming[range]).forEach(mid => {
-        breakdowns[urn] = incoming[range][mid];
+        const breakdown = incoming[range][mid];
+        breakdowns[urn] = breakdown;
       });
     });
     return breakdowns;
@@ -90,7 +93,8 @@ export default Ember.Service.extend({
 
     const url = `/aggregation/query?metricIds=${metricId}&ranges=${range[0]}:${range[1]}&filters=${filterString}&rollup=20`;
     return fetch(url)
-      .then(checkStatus)
+    // .then(checkStatus)
+      .then(res => res.json())
       .then(res => this._extractBreakdowns(res, urn))
       .then(res => this._complete(context, res));
   }

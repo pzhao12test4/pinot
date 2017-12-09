@@ -4,13 +4,14 @@
  * @module components/filter-bar
  * @property {object[]} config            - [required] array of objects (config file) passed in from the route that sets
  *                                          up the filter bar sub-filters
- * @property {object} entities            - [required] data used to filter
- * @property {array}  onFilterSelection   - [required] closure action to bubble to controller on filter selection
+ * @property {number} maxStrLen           - number of characters for filter name truncation
+ * @property {array}  onFilterSelection   - [required] closure action to bubble to controller on filter selection change
  *
  * @example
  * {{filter-bar
  *   config=filterBarConfig
- *   entities=entities
+ *   filterBlocks=filterBlocks
+ *   maxStrLen=25
  *   onSelectFilter=(action "onFilterSelection")}}
  *
  * @exports filter-bar
@@ -23,16 +24,6 @@ const { setProperties } = Ember;
 export default Ember.Component.extend({
 
   /**
-   * Cache for all filters selected (event type + subfilters)
-   */
-  filterCache: null, // { holiday: { countryCode: 'US' } }
-
-  /**
-   * Currently selected event
-   */
-  eventType: null, // 'holiday'
-
-  /**
    * Mock data for every dropdown options
    * This will be an API call
    */
@@ -43,8 +34,8 @@ export default Ember.Component.extend({
    * @type {Object}
    * @example
    * {
-   *  anomaly: {urns1, urns2},
-   *  holiday: {urns3, urns4}
+   *  Holiday: {urns1, urns2},
+   *  Region: {urns3, urns4}
    * }
    */
   urnsCache: {},
@@ -54,27 +45,25 @@ export default Ember.Component.extend({
    * Initializes values of the filter blocks
    * Example of a filter block:
    * {
-   *  eventType: 'holiday',
    *  filtersArray: [
    *    {
    *      isActive: false,
-   *      name: 'Country',
+   *      name: 'country',
    *      id: 'country'
    *    }
    *  ],
    *  header: 'holiday',
+   *  isHidden: true,
    *  inputs: [
    *    {
    *      label: 'country',
    *      type: 'dropdown
    *    }
    *  ]
-   *  isHidden: true,
    * }
    */
   init() {
     this._super(...arguments);
-
     // Fetch the config file to create sub-filters
     const filterBlocks = _.cloneDeep(this.get('config'));
 
@@ -99,37 +88,17 @@ export default Ember.Component.extend({
         isHidden
       });
     });
-
-    const eventType = filterBlocks[0].eventType;
-
-    this.setProperties({ filterBlocks, eventType, filterCache: {} });
-  },
-
-  /**
-   * Triggered when changes are made to attributes by components outside of filter bar
-   * (i.e. changes in search form), filter results based on newly updated filteredUrns
-   */
-  didReceiveAttrs() {
-    const { filteredUrns, onFilter } = this.getProperties('filteredUrns', 'onFilter');
-    if (onFilter) {
-      onFilter(filteredUrns);
-    }
   },
 
   /**
    * observer on entities to set default event type when entities is loaded
    * @type {undefined}
    */
-  filteredUrnsObserver: Ember.observer(
-    'eventType',
+  entitiesObserver: Ember.observer(
     'entities',
-    'filterCache',
-    'filteredUrns',
     function() {
-      const { filteredUrns, onFilter } = this.getProperties('filteredUrns', 'onFilter');
-      if (onFilter) {
-        onFilter(filteredUrns);
-      }
+      const filterBlocks = this.get('config');
+      this.send('selectEventType', filterBlocks[0]);
     }
   ),
 
@@ -194,84 +163,54 @@ export default Ember.Component.extend({
    * @param {String} attribute - name of attribute to check against config's input's labelMapping
    */
   isInConfig(attribute) {
-    return this.get('filterBlocks').some(filterBlock => filterBlock.inputs.some(input => attribute === input.labelMapping));
-  },
-
-  /**
-   * Computes the filtered urns when there are changes to entities, filterCache, and eventType
-   */
-  filteredUrns: Ember.computed(
-    'entities',
-    'filterCache',
-    'eventType',
-    function () {
-      const { entities, filterCache, eventType } =
-        this.getProperties('entities', 'filterCache', 'eventType');
-
-      if (!eventType) { return []; }
-
-      const filters = filterCache[eventType] || {};
-
-      const filteredUrns = Object.keys(entities).filter(urn => {
-        const e = entities[urn];
-        return e.type == 'event' && e.eventType == eventType && this.applyFilters(e, filters);
-      });
-
-      return filteredUrns;
-    }
-  ),
-
-  /**
-   * Determines whether to apply filters
-   * @param {Object} entity
-   * @param {Object} filters - subfilters selected (i.e. {countryCode: 'DE'})
-   */
-  applyFilters(e, filters) {
-    if (_.isEmpty(filters)) {
-      return true;
-    }
-
-    return Object.keys(filters).every((dimName) => {
-      return !filters[dimName].size
-        || (e.attributes[dimName] && e.attributes[dimName].some(dimValue => filters[dimName].has(dimValue)));
-    });
+    return this.get('config').some(filterBlock => filterBlock.inputs.some(input => attribute === input.labelMapping));
   },
 
   actions: {
-    /**
-     * Closure action, called by sub-component (filter-bar-input) whenever a subfilter is selected
-     * @param {String} eventType
-     * @param {String} labelMapping
-     * @param {String[]} selectedValues
-     */
-    onFilterChange(eventType, labelMapping, selectedValues) {
-      const filterCache = this.get('filterCache');
-
-      if (!filterCache[eventType]) {
-        filterCache[eventType] = {};
-      }
-
-      filterCache[eventType][labelMapping] = new Set(selectedValues);
-
-      this.setProperties({
-        filterCache: Object.assign({}, filterCache),
-        eventType });
-    },
 
     /**
-     * Triggered when user selects an event type (down arrow in filter bar)
-     * @param {String} eventType
+     * Expands/collapses a filter block
+     * @method filterByEvent
+     * @param {Object} clickedBlock - selected filter block object
      */
-    selectEventType(eventType) {
-      this.set('eventType', eventType);
-
-      let filterBlocks = this.get('filterBlocks');
+    selectEventType(clickedBlock) {
+      const { entities, onSelect } = this.getProperties('entities', 'onSelect');
+      const cachedHeader = this.urnsCache[clickedBlock.header];
+      let filterBlocks = this.get('config');
 
       // Hide all other blocks when one is clicked
       filterBlocks.forEach(block => {
-        const isHidden = block.eventType !== eventType;
-        Ember.set(block, 'isHidden', isHidden);
+        Ember.set(block, 'isHidden', true);
       });
+
+      // Note: toggleProperty will not be able to find 'filterBlocks', as it is not an observed property
+      // Show clickedBlock
+      Ember.set(clickedBlock, 'isHidden', !clickedBlock.isHidden);
+
+      /*
+      * If results were already previously filtered for this filter block (i.e. "Holiday", "Deployment"),
+      * call onSelect on the cached urns
+      */
+      if (cachedHeader) {
+        onSelect(cachedHeader);
+      }
+      // If this is the first time results are computed, cache them
+      else {
+        const urns = Object.keys(entities).filter(urn => entities[urn].type == 'event'
+                                                  && entities[urn].eventType == clickedBlock.eventType);
+        this.urnsCache[clickedBlock.header] = urns;
+        onSelect(urns);
+      }
+    },
+
+    /**
+     * Bubbled up action, called by the child component, filter-bar-input component, to update the urns cache
+     * @method updateCache
+     * @param {String} header - name of filter block (i.e. "Holiday", "Deployment")
+     * @param {Array} urns - list of urns that are filtered based on subfilters (i.e. country, region)
+     */
+    updateCache(header, urns) {
+      this.urnsCache[header] = urns;
     }
   }
 });

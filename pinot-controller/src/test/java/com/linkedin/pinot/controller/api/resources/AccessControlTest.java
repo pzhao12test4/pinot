@@ -20,7 +20,7 @@ import com.linkedin.pinot.controller.api.access.AccessControl;
 import com.linkedin.pinot.controller.api.access.AccessControlFactory;
 import com.linkedin.pinot.controller.helix.ControllerTest;
 import java.io.IOException;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.container.ContainerRequestContext;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -40,7 +40,7 @@ public class AccessControlTest extends ControllerTest {
   @Test
   public void testAccessDenied() throws Exception {
     try {
-      sendGetRequest(_controllerRequestURLBuilder.forSegmentDownload("testTable", "testSegment"));
+      sendGetRequest(_controllerRequestURLBuilder.forInstanceList());
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().startsWith("Server returned HTTP response code: 403"));
       return;
@@ -48,16 +48,10 @@ public class AccessControlTest extends ControllerTest {
     Assert.fail("Access not denied");
   }
 
-  @AfterClass
-  public void tearDown() {
-    stopController();
-    stopZk();
-  }
-
   public static class DenyAllAccessFactory implements AccessControlFactory {
     private static final AccessControl DENY_ALL_ACCESS = new AccessControl() {
       @Override
-      public boolean hasDataAccess(HttpHeaders httpHeaders, String tableName) {
+      public boolean isAllowed(ContainerRequestContext requestContext) {
         return false;
       }
     };
@@ -66,5 +60,11 @@ public class AccessControlTest extends ControllerTest {
     public AccessControl create() {
       return DENY_ALL_ACCESS;
     }
+  }
+
+  @AfterClass
+  public void tearDown() {
+    stopController();
+    stopZk();
   }
 }

@@ -50,7 +50,7 @@ import com.linkedin.pinot.core.query.aggregation.groupby.GroupKeyGenerator;
 import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
 import com.linkedin.pinot.core.segment.index.loader.Loaders;
 import com.linkedin.pinot.pql.parsers.Pql2Compiler;
-import com.linkedin.pinot.util.GenericRowRecordReader;
+import com.linkedin.pinot.util.TestUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -249,10 +249,10 @@ public class TransformGroupByTest {
     // continuous days in the input. This gives about 10 days per 10k rows.
     long timeDelta = TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS) / 1000;
 
+    final List<GenericRow> data = new ArrayList<>();
     int numDimValues = _dimensionValues.length;
 
-    List<GenericRow> rows = new ArrayList<>(NUM_ROWS);
-    for (int i = 0; i < NUM_ROWS; i++) {
+    for (int row = 0; row < NUM_ROWS; row++) {
       HashMap<String, Object> map = new HashMap<>();
 
       map.put(DIMENSION_NAME, _dimensionValues[random.nextInt(numDimValues)]);
@@ -263,16 +263,16 @@ public class TransformGroupByTest {
 
       GenericRow genericRow = new GenericRow();
       genericRow.init(map);
-      rows.add(genericRow);
+      data.add(genericRow);
     }
 
-    RecordReader recordReader = new GenericRowRecordReader(rows, schema);
     SegmentIndexCreationDriverImpl driver = new SegmentIndexCreationDriverImpl();
-    driver.init(config, recordReader);
+    RecordReader reader = new TestUtils.GenericRowRecordReader(schema, data);
+    driver.init(config, reader);
     driver.build();
 
     LOGGER.info("Built segment {} at {}", segmentName, segmentDirName);
-    return recordReader;
+    return reader;
   }
 
   /**
@@ -287,7 +287,7 @@ public class TransformGroupByTest {
     schema.addField(metricFieldSpec);
 
     TimeFieldSpec timeFieldSpec = new TimeFieldSpec(TIME_COLUMN_NAME, FieldSpec.DataType.LONG, TimeUnit.MILLISECONDS);
-    schema.addField(timeFieldSpec);
+    schema.setTimeFieldSpec(timeFieldSpec);
     return schema;
   }
 

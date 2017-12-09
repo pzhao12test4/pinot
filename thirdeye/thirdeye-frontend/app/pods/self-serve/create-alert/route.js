@@ -41,7 +41,7 @@ export default Ember.Route.extend({
    * @param {Object} transition - transition obj
    * @return {undefined}
    */
-  resetController(controller, isExiting) {
+  resetController(controller, isExiting, transition) {
     this._super(...arguments);
     if (isExiting) {
       controller.clearAll();

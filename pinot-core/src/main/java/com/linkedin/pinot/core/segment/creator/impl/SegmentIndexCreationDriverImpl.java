@@ -97,7 +97,7 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
 
   @Override
   public void init(SegmentGeneratorConfig config) throws Exception {
-    init(config, new RecordReaderSegmentCreationDataSource(RecordReaderFactory.getRecordReader(config)));
+    init(config, new RecordReaderSegmentCreationDataSource(RecordReaderFactory.get(config)));
   }
 
   public void init(SegmentGeneratorConfig config, SegmentCreationDataSource dataSource) throws Exception {
@@ -209,9 +209,7 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
     if (starTreeIndexSpec == null) {
       starTreeIndexSpec = new StarTreeIndexSpec();
       starTreeIndexSpec.setMaxLeafRecords(StarTreeIndexSpec.DEFAULT_MAX_LEAF_RECORDS);
-
-      // Overwrite the null index spec with default one.
-      config.enableStarTreeIndex(starTreeIndexSpec);
+      config.setStarTreeIndexSpec(starTreeIndexSpec);
     }
     //create star builder config from startreeindexspec. Merge these two in one later.
     StarTreeBuilderConfig starTreeBuilderConfig = new StarTreeBuilderConfig();
@@ -534,8 +532,11 @@ public class SegmentIndexCreationDriverImpl implements SegmentIndexCreationDrive
     return new File(new File(config.getOutDir()), segmentName);
   }
 
-  private GenericRow readNextRowSanitized(GenericRow readRow, GenericRow transformedRow) throws IOException {
-    return extractor.transform(recordReader.next(readRow), transformedRow);
+  private GenericRow readNextRowSanitized(GenericRow readRow, GenericRow transformedRow) {
+    readRow = GenericRow.createOrReuseRow(readRow);
+    readRow = recordReader.next(readRow);
+    transformedRow = GenericRow.createOrReuseRow(transformedRow);
+    return extractor.transform(readRow, transformedRow);
   }
 
   public SegmentPreIndexStatsContainer getSegmentStats() {

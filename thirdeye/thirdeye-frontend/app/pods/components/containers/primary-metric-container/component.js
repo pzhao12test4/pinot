@@ -20,8 +20,7 @@ function select(store) {
     selectedDimensions,
     selectedEvents,
     selectedMetricIds,
-    color,
-    isSelected
+    color
   } = store.primaryMetric;
 
   const {
@@ -36,6 +35,8 @@ function select(store) {
   const {
     events = []
   } = store.events;
+
+  const isSelected = true;
 
   const uiMainMetric = _.merge({}, metricData, regions);
   const uiRelatedMetric = _.merge({}, relatedMetricEntities, regions);
@@ -60,7 +61,7 @@ function select(store) {
           dimension,
           { isSelected });
       }).filter(dimension => dimension),
-    primaryMetric: Object.assign({}, uiMainMetric[primaryMetricId], {color}, {isSelected}),
+    primaryMetric: Object.assign({}, uiMainMetric[primaryMetricId], {color}),
     selectedMetrics: selectedMetricIds
       .map((id) => {
 
@@ -100,13 +101,6 @@ function actions(dispatch) {
     },
 
     /**
-     * Handles primary selection
-     */
-    onPrimaryClick() {
-      dispatch(Actions.selectPrimary());
-    },
-
-    /**
      * Handles dimension selection
      */
     onSelection(name) {
@@ -126,7 +120,6 @@ function actions(dispatch) {
     onMetricSelection(metric) {
       dispatch(Actions.selectMetric(metric));
     },
-    
 
     /**
      * Handles deselection of an entity

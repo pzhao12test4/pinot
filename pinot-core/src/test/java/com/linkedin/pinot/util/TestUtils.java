@@ -16,7 +16,10 @@
 package com.linkedin.pinot.util;
 
 import com.google.common.base.Function;
+import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.common.response.broker.GroupByResult;
+import com.linkedin.pinot.core.data.GenericRow;
+import com.linkedin.pinot.core.data.readers.RecordReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -26,6 +29,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.slf4j.Logger;
@@ -203,5 +207,64 @@ public class TestUtils {
       @Nullable String errorMessage)
       throws Exception {
     waitForCondition(condition, 1000L, timeoutMs, errorMessage);
+  }
+
+  /**
+   * Utility class for reading generic row records
+   */
+  public static class GenericRowRecordReader implements RecordReader {
+
+    private final Schema _schema;
+    private final List<GenericRow> _data;
+    int counter = 0;
+
+    // Constructor for the class.
+    public GenericRowRecordReader(final Schema schema, final List<GenericRow> data) {
+      _schema = schema;
+      _data = data;
+    }
+
+    @Override
+    public void rewind()
+        throws Exception {
+      counter = 0;
+    }
+
+    @Override
+    public GenericRow next() {
+      return _data.get(counter++);
+    }
+
+    @Override
+    public GenericRow next(GenericRow row) {
+      return next();
+    }
+
+    @Override
+    public void init()
+        throws Exception {
+
+    }
+
+    @Override
+    public boolean hasNext() {
+      return counter < _data.size();
+    }
+
+    @Override
+    public Schema getSchema() {
+      return _schema;
+    }
+
+    @Override
+    public Map<String, MutableLong> getNullCountMap() {
+      return null;
+    }
+
+    @Override
+    public void close()
+        throws Exception {
+
+    }
   }
 }

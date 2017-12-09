@@ -235,7 +235,7 @@ public class FastHllQueriesTest extends BaseQueriesTest {
     if (hasPreGeneratedHllColumns) {
       segmentGeneratorConfig.setHllConfig(new HllConfig(HLL_LOG2M));
     } else {
-      segmentGeneratorConfig.enableStarTreeIndex(null);
+      segmentGeneratorConfig.setEnableStarTreeIndex(true);
       // Intentionally use the non-default suffix
       segmentGeneratorConfig.setHllConfig(
           new HllConfig(HLL_LOG2M, new HashSet<>(Arrays.asList("column17", "column18")), "_HLL"));

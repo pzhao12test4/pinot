@@ -36,7 +36,6 @@ export default Ember.Controller.extend({
   isDuplicateEmail: false,
   showGraphLegend: false,
   metricGranularityOptions: [],
-  topDimensions: [],
   originalDimensions: [],
   bsAlertBannerType: 'success',
   graphEmailLinkProps: '',
@@ -118,18 +117,6 @@ export default Ember.Controller.extend({
   },
 
   /**
-   * All selected dimensions to be loaded into graph
-   * @returns {Array}
-   */
-  selectedDimensions: Ember.computed(
-    'topDimensions',
-    'topDimensions.@each.isSelected',
-    function() {
-      return this.get('topDimensions').filterBy('isSelected');
-    }
-  ),
-
-  /**
    * Setting default sensitivity if selectedSensitivity is undefined
    * @returns {String}
    */
@@ -138,8 +125,8 @@ export default Ember.Controller.extend({
     'selectedGranularity',
     function() {
       let {
-        selectedSensitivity,
-        selectedGranularity
+       selectedSensitivity,
+       selectedGranularity
       } =  this.getProperties('selectedSensitivity', 'selectedGranularity');
 
       if (!selectedSensitivity) {
@@ -411,7 +398,8 @@ export default Ember.Controller.extend({
           selectedMetric: Object.assign(metricData, { color: 'blue' })
         });
       }
-    }).catch((error) => {
+    })
+    .catch((error) => {
       // The request failed. No graph to render.
       this.clearAll();
       this.setProperties({
@@ -459,8 +447,7 @@ export default Ember.Controller.extend({
                 name: subDimension,
                 color: colors[colorIndex],
                 baselineValues: dimensionObj[subDimension].baselineValues,
-                currentValues: dimensionObj[subDimension].currentValues,
-                isSelected: true
+                currentValues: dimensionObj[subDimension].currentValues
               });
               colorIndex++;
             }
@@ -677,7 +664,7 @@ export default Ember.Controller.extend({
    * @return {Boolean} whether errors were found
    */
   isEmailValid(emailArr) {
-    const emailRegex = /^.{3,}@linkedin.com$/;
+    const emailRegex = /^.{3,}\@linkedin.com$/;
     let isValid = true;
 
     for (var email of emailArr) {
@@ -890,14 +877,6 @@ export default Ember.Controller.extend({
    */
   actions: {
 
-
-    /**
-     * Handles the primary metric selection in the alert creation
-     */
-    onPrimaryMetricToggle() {
-      return;
-    },
-
     /**
      * When a metric is selected, fetch its props, and send them to the graph builder
      * @method onSelectMetric
@@ -908,7 +887,7 @@ export default Ember.Controller.extend({
       this.clearAll();
       this.setProperties({
         isMetricDataLoading: true,
-        topDimensions: [],
+        topDimensions: null,
         selectedMetricOption: selectedObj
       });
       this.fetchMetricData(selectedObj.id)
@@ -1123,16 +1102,6 @@ export default Ember.Controller.extend({
     },
 
     /**
-     * Enable reaction to dimension toggling in graph legend component
-     * @method onSelection
-     * @return {undefined}
-     */
-    onSelection(selectedDimension) {
-      const { isSelected } = selectedDimension;
-      Ember.set(selectedDimension, 'isSelected', !isSelected);
-    },
-
-    /**
      * User hits submit... Buckle up - we're going for a ride! What we have to do here is:
      *  1. Make sure all fields are validated (done inline and with computed props)
      *  2. Disable submit button
@@ -1231,8 +1200,9 @@ export default Ember.Controller.extend({
             isMetricDataInvalid: false
           });
           return newFunctionId;
+        })
         // Redirects to manage alerts
-        }).then((id) => {
+        .then((id) => {
           if (redirectToAlertPage) {
             // Redirect to onboarding page to trigger wrapper
             this.transitionToRoute('manage.alert', id, { queryParams: { replay: true }});
@@ -1240,13 +1210,15 @@ export default Ember.Controller.extend({
             // Navigate to alerts search view
             this.transitionToRoute('manage.alerts.edit', id);
           }
+        })
         // If Alert Group edit/create fails, remove the orphaned anomaly Id
-        }).catch((error) => {
+        .catch((error) => {
           this.setAlertCreateErrorState(error);
           this.removeThirdEyeFunction(newFunctionId);
         });
+      })
       // Alert creation call has failed
-      }).catch((error) => {
+      .catch((error) => {
         this.setAlertCreateErrorState(error);
       });
     }

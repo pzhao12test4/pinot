@@ -1,79 +1,55 @@
 import Ember from 'ember';
-import { filterObject, filterPrefix, toBaselineUrn, toCurrentUrn, toColor, checkStatus } from 'thirdeye-frontend/helpers/utils';
+import { makeIterable, filterObject, filterPrefix, toBaselineUrn, toCurrentUrn } from 'thirdeye-frontend/helpers/utils';
 import EVENT_TABLE_COLUMNS from 'thirdeye-frontend/mocks/eventTableColumns';
 import config from 'thirdeye-frontend/mocks/filterBarConfig';
-import CryptoJS from 'cryptojs';
-import _ from 'lodash';
 
 const ROOTCAUSE_TAB_DIMENSIONS = "dimensions";
 const ROOTCAUSE_TAB_METRICS = "metrics";
 const ROOTCAUSE_TAB_EVENTS = "events";
 
-// TODO: Update module import to comply by new Ember standards
-
 export default Ember.Controller.extend({
+
+  /**
+   * QueryParams that needs to update the url
+   */
   queryParams: [
-    'metricId',
-    'anomalyId',
-    'sessionId'
+    'granularity',
+    'filters',
+    'compareMode',
+    'anomalyRangeStart',
+    'anomalyRangeEnd',
+    'analysisRangeStart',
+    'analysisRangeEnd'
   ],
+  entitiesService: Ember.inject.service('rootcause-entities-cache'), // service
 
-  //
-  // services
-  //
-  entitiesService: Ember.inject.service('rootcause-entities-cache'),
+  timeseriesService: Ember.inject.service('rootcause-timeseries-cache'), // service
 
-  timeseriesService: Ember.inject.service('rootcause-timeseries-cache'),
+  aggregatesService: Ember.inject.service('rootcause-aggregates-cache'), // service
 
-  aggregatesService: Ember.inject.service('rootcause-aggregates-cache'),
+  breakdownsService: Ember.inject.service('rootcause-breakdowns-cache'), // service
 
-  breakdownsService: Ember.inject.service('rootcause-breakdowns-cache'),
 
-  //
-  // rootcause search context
-  //
-  context: null, // { urns: Set, anomalyRange: [2], baselineRange: [2], analysisRange: [2] }
-
-  //
-  // user selection
-  //
   selectedUrns: null, // Set
 
   invisibleUrns: null, // Set
 
   hoverUrns: null, // Set
 
-  filteredUrns: null,
+  context: null, // { urns: Set, anomalyRange: [2], baselineRange: [2], analysisRange: [2] }
+
+  filterConfig: config, // {}
+  
+  settingsConfig: null, // {}
 
   activeTab: null, // ""
 
-  timeseriesMode: null, // ""
-
-  //
-  // session data
-  //
-
-  sessionName: null, // ""
-
-  sessionText: null, // ""
-
-  //
-  // static component config
-  //
-  filterConfig: config, // {}
-
-  settingsConfig: null, // {}
-
   init() {
     this._super(...arguments);
-    this.setProperties({
-      invisibleUrns: new Set(),
-      hoverUrns: new Set(),
-      filteredUrns: new Set(),
-      activeTab: ROOTCAUSE_TAB_DIMENSIONS,
-      timeseriesMode: 'absolute'
-    });
+    this.setProperties({ activeTab: ROOTCAUSE_TAB_DIMENSIONS });
   },
+
+  filteredUrns: null,
 
   _contextObserver: Ember.observer(
     'context',
@@ -84,6 +60,7 @@ export default Ember.Controller.extend({
     'aggregatesService',
     'breakdownsService',
     function () {
+      console.log('_contextObserver()');
       const { context, entities, selectedUrns, entitiesService, timeseriesService, aggregatesService, breakdownsService } =
         this.getProperties('context', 'entities', 'selectedUrns', 'entitiesService', 'timeseriesService', 'aggregatesService', 'breakdownsService');
 
@@ -109,16 +86,15 @@ export default Ember.Controller.extend({
   entities: Ember.computed(
     'entitiesService.entities',
     function () {
-      const entities = _.cloneDeep(this.get('entitiesService.entities'));
-
-      Object.keys(entities).forEach(urn => entities[urn].color = toColor(urn));
-      return entities;
+      console.log('entities()');
+      return this.get('entitiesService.entities');
     }
   ),
 
   timeseries: Ember.computed(
     'timeseriesService.timeseries',
     function () {
+      console.log('timeseries()');
       return this.get('timeseriesService.timeseries');
     }
   ),
@@ -126,6 +102,7 @@ export default Ember.Controller.extend({
   aggregates: Ember.computed(
     'aggregatesService.aggregates',
     function () {
+      console.log('aggregates()');
       return this.get('aggregatesService.aggregates');
     }
   ),
@@ -133,19 +110,8 @@ export default Ember.Controller.extend({
   breakdowns: Ember.computed(
     'breakdownsService.breakdowns',
     function () {
+      console.log('breakdowns()');
       return this.get('breakdownsService.breakdowns');
-    }
-  ),
-
-  anomalyUrn: Ember.computed(
-    'context',
-    function () {
-      const { context } = this.getProperties('context');
-      const anomalyUrns = filterPrefix(context.urns, 'thirdeye:event:anomaly:');
-
-      if (!anomalyUrns) { return false; }
-
-      return anomalyUrns[0];
     }
   ),
 
@@ -154,12 +120,14 @@ export default Ember.Controller.extend({
     'selectedUrns',
     'invisibleUrns',
     function () {
+      console.log('chartSelectedUrns()');
       const { selectedUrns, invisibleUrns } =
         this.getProperties('selectedUrns', 'invisibleUrns');
 
       const urns = new Set(selectedUrns);
       [...invisibleUrns].forEach(urn => urns.delete(urn));
 
+      console.log('chartSelectedUrns: urns', urns);
       return urns;
     }
   ),
@@ -168,6 +136,7 @@ export default Ember.Controller.extend({
     'entities',
     'filteredUrns',
     function () {
+      console.log('eventTableEntities()');
       const { entities, filteredUrns } = this.getProperties('entities', 'filteredUrns');
       return filterObject(entities, (e) => filteredUrns.has(e.urn));
     }
@@ -178,7 +147,9 @@ export default Ember.Controller.extend({
   eventFilterEntities: Ember.computed(
     'entities',
     function () {
+      console.log('eventFilterEntities()');
       const { entities } = this.getProperties('entities');
+      console.log("printing entities: ", entities);
       return filterObject(entities, (e) => e.type == 'event');
     }
   ),
@@ -195,63 +166,28 @@ export default Ember.Controller.extend({
   ),
 
   isLoadingEntities: Ember.computed(
-    'entitiesService.pending',
+    'entitiesService.entities',
     function () {
+      console.log('isLoadingEntities()');
       return this.get('entitiesService.pending').size > 0;
     }
   ),
 
   isLoadingTimeseries: Ember.computed(
-    'timeseriesService.pending',
+    'timeseriesService.timeseries',
     function () {
+      console.log('isLoadingTimeseries()');
       return this.get('timeseriesService.pending').size > 0;
     }
   ),
 
   isLoadingAggregates: Ember.computed(
-    'aggregatesService.pending',
+    'aggregatesService.aggregates',
     function () {
-      return this.get('aggregatesService.pending').size > 0;
+      console.log('isLoadingAggregates()');
+      return this.get('aggregatesService.aggregates').size > 0;
     }
   ),
-
-  isLoadingBreakdowns: Ember.computed(
-    'breakdownsService.pending',
-    function () {
-      return this.get('breakdownsService.pending').size > 0;
-    }
-  ),
-
-  isLoading: Ember.computed(
-    'isLoadingEntities',
-    'isLoadingTimeseries',
-    'isLoadingAggregates',
-    'isLoadingBreakdowns',
-    function () {
-      const { isLoadingEntities, isLoadingTimeseries, isLoadingAggregates, isLoadingBreakdowns } =
-        this.getProperties('isLoadingEntities', 'isLoadingTimeseries', 'isLoadingAggregates', 'isLoadingBreakdowns');
-      return isLoadingEntities || isLoadingTimeseries || isLoadingAggregates || isLoadingBreakdowns;
-    }
-  ),
-
-  _makeSession() {
-    const { context, selectedUrns, sessionId, sessionName, sessionText } =
-      this.getProperties('context', 'selectedUrns', 'sessionId', 'sessionName', 'sessionText');
-
-    return {
-      id: sessionId,
-      name: sessionName,
-      text: sessionText,
-      compareMode: context.compareMode,
-      granularity: context.granularity,
-      anomalyRangeStart: context.anomalyRange[0],
-      anomalyRangeEnd: context.anomalyRange[1],
-      analysisRangeStart: context.analysisRange[0],
-      analysisRangeEnd: context.analysisRange[1],
-      contextUrns: context.urns,
-      selectedUrns
-    };
-  },
 
   //
   // Actions
@@ -259,6 +195,8 @@ export default Ember.Controller.extend({
 
   actions: {
     onSelection(updates) {
+      console.log('onSelection()');
+      console.log('onSelection: updates', updates);
       const { selectedUrns } = this.getProperties('selectedUrns');
       Object.keys(updates).filter(urn => updates[urn]).forEach(urn => selectedUrns.add(urn));
       Object.keys(updates).filter(urn => !updates[urn]).forEach(urn => selectedUrns.delete(urn));
@@ -266,6 +204,8 @@ export default Ember.Controller.extend({
     },
 
     onVisibility(updates) {
+      console.log('onVisibility()');
+      console.log('onVisibility: updates', updates);
       const { invisibleUrns } = this.getProperties('invisibleUrns');
       Object.keys(updates).filter(urn => updates[urn]).forEach(urn => invisibleUrns.delete(urn));
       Object.keys(updates).filter(urn => !updates[urn]).forEach(urn => invisibleUrns.add(urn));
@@ -278,48 +218,71 @@ export default Ember.Controller.extend({
      * @param {Object} newParams new parameters to update
      */
     onContext(context) {
+      console.log('settingsOnChange()');
       this.set('context', context);
     },
 
     onFilter(urns) {
+      console.log('filterOnSelect()');
       this.set('filteredUrns', new Set(urns));
     },
 
-    onChart(timeseriesMode) {
-      this.set('timeseriesMode',timeseriesMode);
+    chartOnHover(urns) {
+      console.log('chartOnHover()');
+      this.set('hoverUrns', new Set(urns));
     },
 
-    chartOnHover(urns, timestamp) {
-      this.setProperties({ hoverUrns: new Set(urns), hoverTimestamp: timestamp });
+    loadtestSelectedUrns() {
+      console.log('loadtestSelected()');
+      const { entities } = this.getProperties('entities');
+      this.set('selectedUrns', new Set(Object.keys(entities)));
     },
 
-    onSessionSave() {
-      const jsonString = JSON.stringify(this._makeSession());
-
-      return fetch(`/session/`, { method: 'POST', body: jsonString })
-        .then(checkStatus)
-        .then(res => this.set('sessionId', res));
+    addSelectedUrns(urns) {
+      console.log('addSelectedUrns()');
+      const { selectedUrns } = this.getProperties('selectedUrns');
+      makeIterable(urns).forEach(urn => selectedUrns.add(urn));
+      this.set('selectedUrns', new Set(selectedUrns));
     },
 
-    onSessionSaveCopy() {
-      const { sessionId } = this.getProperties('sessionId');
-
-      const session = this._makeSession();
-      delete session['id'];
-      session['previousId'] = sessionId;
-
-      const jsonString = JSON.stringify(session);
-
-      return fetch(`/session/`, { method: 'POST', body: jsonString })
-        .then(checkStatus)
-        .then(res => this.set('sessionId', res));
+    removeSelectedUrns(urns) {
+      console.log('removeSelectedUrns()');
+      const { selectedUrns } = this.getProperties('selectedUrns');
+      makeIterable(urns).forEach(urn => selectedUrns.delete(urn));
+      this.set('selectedUrns', new Set(selectedUrns));
     },
 
-    onFeedback(anomalyUrn, feedback, comment) {
-      const id = anomalyUrn.split(':')[3];
-      const jsonString = JSON.stringify({ feedbackType: feedback, comment });
+    addFilteredUrns(urns) {
+      console.log('addFilteredUrns()');
+      const { filteredUrns } = this.getProperties('filteredUrns');
+      makeIterable(urns).forEach(urn => filteredUrns.add(urn));
+      this.set('filteredUrns', new Set(filteredUrns));
+    },
 
-      return fetch(`/dashboard/anomaly-merged-result/feedback/${id}`, { method: 'POST', body: jsonString });
+    removeFilteredUrns(urns) {
+      console.log('removeFilteredUrns()');
+      const { filteredUrns } = this.getProperties('filteredUrns');
+      makeIterable(urns).forEach(urn => filteredUrns.delete(urn));
+      this.set('filteredUrns', new Set(filteredUrns));
+    },
+
+    addInvisibleUrns(urns) {
+      console.log('addInvisibleUrns()');
+      const { invisibleUrns } = this.getProperties('invisibleUrns');
+      makeIterable(urns).forEach(urn => invisibleUrns.add(urn));
+      this.set('invisibleUrns', new Set(invisibleUrns));
+    },
+
+    removeInvisibleUrns(urns) {
+      console.log('removeInvisibleUrns()');
+      const { invisibleUrns } = this.getProperties('invisibleUrns');
+      makeIterable(urns).forEach(urn => invisibleUrns.delete(urn));
+      this.set('invisibleUrns', new Set(invisibleUrns));
+    },
+
+    onHeatmapClick([dimension, subdimension]) {
+      // TODO: do something with the call back
+      console.log('heatmap click registerd for: ', dimension, subdimension);
     }
   }
 });

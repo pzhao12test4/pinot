@@ -2,28 +2,6 @@ import Ember from 'ember';
 import moment from 'moment';
 import _ from 'lodash';
 
-// TODO load from config
-// colors for metrics
-const metricColors = [
-  'blue',
-  'green',
-  'red',
-  'purple',
-  'orange',
-  'teal',
-  'pink'
-];
-
-// TODO load from config
-// colors for events
-const eventColorMapping = {
-  holiday: 'green',
-  informed: 'red',
-  lix: 'purple',
-  gcn: 'orange',
-  anomaly: 'teal'
-};
-
 /**
  * The Promise returned from fetch() won't reject on HTTP error status even if the response is an HTTP 404 or 500.
  * This helps us define a custom response handler.
@@ -49,17 +27,6 @@ export function checkStatus(response, mode = 'get', recoverBlank = false) {
       throw error;
     }
   }
-}
-
-/**
- * Pluralizes and formats the anomaly range duration string
- * @param {Number} time
- * @param {String} unit
- * @returns {String}
- */
-export function pluralizeTime(time, unit) {
-  const unitStr = time > 1 ? unit + 's' : unit;
-  return time ? time + ' ' + unitStr : '';
 }
 
 export function isIterable(obj) {
@@ -108,11 +75,8 @@ export function appendTail(urn, tail) {
   if (_.isEmpty(tail)) {
     return urn;
   }
-
-  const existingTail = extractTail(urn);
-  const tailString = [...makeIterable(tail), ...existingTail].sort().join(':');
-  const appendString = tailString ? `:${tailString}` : '';
-  return `${stripTail(urn)}${appendString}`;
+  const tailString = tail.join(':');
+  return `${urn}:${tailString}`;
 }
 
 export function toCurrentUrn(urn) {
@@ -125,18 +89,6 @@ export function toBaselineUrn(urn) {
 
 export function toMetricUrn(urn) {
   return metricUrnHelper('thirdeye:metric:', urn);
-}
-
-export function toMetricLabel(urn, entities) {
-  let metricName = stripTail(urn);
-  if (entities && entities[stripTail(urn)]) {
-    metricName = entities[stripTail(urn)].label.split("::")[1];
-  }
-
-  const filters = toFilters(urn).map(t => t[1]);
-  const filterString = filters.length ? ` (${filters.join(', ')})` : '';
-
-  return `${metricName}${filterString}`;
 }
 
 function metricUrnHelper(prefix, urn) {
@@ -184,7 +136,7 @@ export function toFilters(urns) {
   const dimensionFilters = filterPrefix(urns, 'thirdeye:dimension:').map(urn => _.slice(urn.split(':'), 2, 4));
   const metricFilters = filterPrefix(urns, 'thirdeye:metric:').map(extractTail).map(enc => enc.map(tup => tup.split('='))).reduce(flatten, []);
   const frontendMetricFilters = filterPrefix(urns, 'frontend:metric:').map(extractTail).map(enc => enc.map(tup => tup.split('='))).reduce(flatten, []);
-  return [...dimensionFilters, ...metricFilters, ...frontendMetricFilters].sort();
+  return [...dimensionFilters, ...metricFilters, ...frontendMetricFilters];
 }
 
 export function toFilterMap(filters) {
@@ -203,17 +155,6 @@ export function toFilterMap(filters) {
   return filterMap;
 }
 
-export function toColor(urn) {
-  // TODO move to controller, requires color loading from backend
-  if (urn.startsWith('thirdeye:event:')) {
-    return eventColorMapping[urn.split(':')[2]];
-  }
-  if (urn.startsWith('thirdeye:metric:')) {
-    return metricColors[urn.split(':')[2] % metricColors.length];
-  }
-  return 'none';
-}
-
 /**
  * finds the corresponding labelMapping field given a label in the filterBarConfig
  * This is only a placeholder since the filterBarConfig is not finalized
@@ -228,4 +169,4 @@ export function findLabelMapping(label, config) {
   return labelMapping;
 }
 
-export default Ember.Helper.helper({ checkStatus, pluralizeTime, isIterable, makeIterable, filterObject, toCurrentUrn, toBaselineUrn, toMetricUrn, stripTail, extractTail, appendTail, hasPrefix, filterPrefix, toBaselineRange, toFilters, toFilterMap, findLabelMapping, toMetricLabel, toColor });
+export default Ember.Helper.helper({ checkStatus, isIterable, makeIterable, filterObject, toCurrentUrn, toBaselineUrn, toMetricUrn, stripTail, extractTail, appendTail, hasPrefix, filterPrefix, toBaselineRange, toFilters, toFilterMap, findLabelMapping });

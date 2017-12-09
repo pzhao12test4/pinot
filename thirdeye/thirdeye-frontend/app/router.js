@@ -1,7 +1,7 @@
-import EmberRouter from '@ember/routing/router';
+import Ember from 'ember';
 import config from './config/environment';
 
-const Router = EmberRouter.extend({
+const Router = Ember.Router.extend({
   location: config.locationType,
   rootURL: config.rootURL
 });
@@ -32,7 +32,8 @@ Router.map(function() {
     this.route('import-metric');
   });
   this.route('screenshot', { path: 'screenshot/:anomalyId' });
-  this.route('rootcause');
+  this.route('rca-poc');
+  this.route('rootcause', { path: 'rootcause/:rootcauseId' });
 });
 
 export default Router;

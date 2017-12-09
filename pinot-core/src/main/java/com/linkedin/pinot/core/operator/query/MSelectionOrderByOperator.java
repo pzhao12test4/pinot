@@ -76,6 +76,12 @@ public class MSelectionOrderByOperator extends BaseOperator<IntermediateResultsB
   }
 
   @Override
+  public boolean open() {
+    _projectionOperator.open();
+    return true;
+  }
+
+  @Override
   protected IntermediateResultsBlock getNextBlock() {
     int numDocsScanned = 0;
 
@@ -103,6 +109,12 @@ public class MSelectionOrderByOperator extends BaseOperator<IntermediateResultsB
   @Override
   public String getOperatorName() {
     return OPERATOR_NAME;
+  }
+
+  @Override
+  public boolean close() {
+    _projectionOperator.close();
+    return true;
   }
 
   @Override

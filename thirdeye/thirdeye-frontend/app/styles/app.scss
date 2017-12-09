@@ -4,8 +4,6 @@
 
 // All-in-one Bootstrap
 @import "ember-bootstrap/bootstrap.scss";
-@import "ember-modal-dialog/ember-modal-structure";
-@import "ember-modal-dialog/ember-modal-appearance";
 
 
 // Shared
@@ -34,19 +32,12 @@ body {
 @import 'components/anomaly-graph';
 @import 'components/contribution-table';
 @import 'components/te-navbar';
-@import 'components/button';
-@import 'components/links';
 @import 'components/filter-select';
 @import 'components/dimension-heatmap';
 @import 'components/dimension-summary';
 @import 'components/login-form';
 @import 'components/entity-filter';
 @import 'components/filter-bar';
-@import 'components/te-modal';
-@import 'components/rootcause-anomaly';
-@import 'components/te-tooltip';
-@import 'components/rootcause-legend';
-@import 'components/rootcause-chart';
 
 // Pod Pages
 @import 'ember-power-select/themes/bootstrap';
@@ -57,4 +48,3 @@ body {
 @import 'pods/rca';
 @import 'pods/events';
 @import 'pods/login';
-@import 'pods/rootcause';

@@ -1,12 +1,10 @@
 /* eslint-env node */
-'use strict';
-
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const Funnel = require('broccoli-funnel');
 const MergeTrees = require('broccoli-merge-trees');
 
 module.exports = function(defaults) {
-  let app = new EmberApp(defaults, {
+  var app = new EmberApp(defaults, {
     // Add options here
     'ember-cli-babel': {
       includePolyfill: true
@@ -26,10 +24,7 @@ module.exports = function(defaults) {
     },
 
     babel: {
-      sourceMaps: 'inline',
-      plugins: [
-        'transform-object-rest-spread'
-      ]
+      sourceMaps: 'inline'
     },
 
     'ember-bootstrap': {

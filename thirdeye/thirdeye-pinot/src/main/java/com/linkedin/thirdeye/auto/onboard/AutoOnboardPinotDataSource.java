@@ -1,9 +1,6 @@
 package com.linkedin.thirdeye.auto.onboard;
 
 import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,15 +39,10 @@ public class AutoOnboardPinotDataSource extends AutoOnboard {
 
   private AutoOnboardPinotMetricsUtils autoLoadPinotMetricsUtils;
 
-  public AutoOnboardPinotDataSource(DataSourceConfig dataSourceConfig)
-      throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+  public AutoOnboardPinotDataSource(DataSourceConfig dataSourceConfig) {
     super(dataSourceConfig);
-    try {
-      autoLoadPinotMetricsUtils = new AutoOnboardPinotMetricsUtils(dataSourceConfig);
-      LOG.info("Created {}", AutoOnboardPinotDataSource.class.getName());
-    } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
-      throw e;
-    }
+    autoLoadPinotMetricsUtils = new AutoOnboardPinotMetricsUtils(dataSourceConfig);
+    LOG.info("Created {}", AutoOnboardPinotDataSource.class.getName());
   }
 
   public AutoOnboardPinotDataSource(DataSourceConfig dataSourceConfig, AutoOnboardPinotMetricsUtils utils) {

@@ -15,72 +15,80 @@
  */
 package com.linkedin.pinot.core.data.readers;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 
-@SuppressWarnings("unused")
 public class CSVRecordReaderConfig implements RecordReaderConfig {
-  private String _fileFormat;
-  private String _header;
-  private char _delimiter = ',';
-  private char _multiValueDelimiter = ';';
-  private String _dateFormat;
-  private Set<String> _dateColumns;
+  private String _csvFileFormat;
+  private String _csvHeader;
+  private String _csvDelimiter;
+  private String _csvDateFormat;
+  private HashSet<String> _csvDateColumns;
 
-  public String getFileFormat() {
-    return _fileFormat;
+  public CSVRecordReaderConfig() {
+    _csvDelimiter = ",";
   }
 
-  public void setFileFormat(String fileFormat) {
-    _fileFormat = fileFormat;
+  @JsonProperty("CsvFileFormat")
+  public String getCsvFileFormat() {
+    return _csvFileFormat;
   }
 
-  public String getHeader() {
-    return _header;
+  @JsonProperty("CsvFileFormat")
+  public CSVRecordReaderConfig setCsvFileFormat(String csvFileFormat) {
+    _csvFileFormat = csvFileFormat;
+    return this;
   }
 
-  public void setHeader(String header) {
-    _header = header;
+  @JsonProperty("CsvHeader")
+  public String getCsvHeader() {
+    return _csvHeader;
   }
 
-  public char getDelimiter() {
-    return _delimiter;
+  @JsonProperty("CsvHeader")
+  public CSVRecordReaderConfig setCsvHeader(String csvHeader) {
+    _csvHeader = csvHeader;
+    return this;
   }
 
-  public void setDelimiter(char delimiter) {
-    _delimiter = delimiter;
+  @JsonProperty("CsvDelimiter")
+  public String getCsvDelimiter() {
+    return _csvDelimiter;
   }
 
-  public char getMultiValueDelimiter() {
-    return _multiValueDelimiter;
+  @JsonProperty("CsvDelimiter")
+  public CSVRecordReaderConfig setCsvDelimiter(String csvDelimiter) {
+    _csvDelimiter = csvDelimiter;
+    return this;
   }
 
-  public void setMultiValueDelimiter(char multiValueDelimiter) {
-    _multiValueDelimiter = multiValueDelimiter;
+  @JsonProperty("CsvDateFormat")
+  public String getCsvDateFormat() {
+    return _csvDateFormat;
   }
 
-  public String getDateFormat() {
-    return _dateFormat;
+  @JsonProperty("CsvDateFormat")
+  public CSVRecordReaderConfig setCsvDateFormat(String csvDateFormat) {
+    _csvDateFormat = csvDateFormat;
+    return this;
   }
 
-  public void setDateFormat(String dateFormat) {
-    _dateFormat = dateFormat;
+  @JsonProperty("CsvDateColumns")
+  public Set<String> getCsvDateColumns() {
+    return _csvDateColumns;
   }
 
-  public Set<String> getDateColumns() {
-    return _dateColumns;
+  @JsonProperty("CsvDateColumns")
+  public void setCsvDateColumns(HashSet<String> csvDateColumns) {
+    _csvDateColumns = csvDateColumns;
   }
 
-  public void setDateColumns(Set<String> dateColumns) {
-    _dateColumns = dateColumns;
-  }
-
-  @JsonIgnore
-  public boolean isDataColumn(String columnName) {
-    return _dateColumns.contains(columnName);
+  public boolean columnIsDate(String column) {
+    return ((_csvDateColumns != null) && (_csvDateColumns.contains(column)));
   }
 
   @Override

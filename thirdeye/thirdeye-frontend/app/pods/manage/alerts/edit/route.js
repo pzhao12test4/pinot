@@ -40,13 +40,16 @@ export default Ember.Route.extend({
       metric: metricName,
       collection: dataset,
       exploreDimensions,
+      functionName,
       filters,
       bucketSize,
       bucketUnit,
       id
-    } = model.function;
+     } = model.function;
 
     let metricId = '';
+    let allGroupNames = [];
+    let allGroups = [];
     let metricDataUrl = '';
     let metricDimensionURl = '';
     let selectedAppName = '';
@@ -85,7 +88,7 @@ export default Ember.Route.extend({
         return fetch(metricDataUrl).then(checkStatus);
       })
       .then((metricData) => {
-        Object.assign(metricData, { color: 'blue' });
+        Object.assign(metricData, { color: 'blue' })
         Object.assign(model, { metricData });
         return fetch(`/thirdeye/entity/ALERT_CONFIG`).then(checkStatus);
       })
@@ -115,7 +118,7 @@ export default Ember.Route.extend({
       });
   },
 
-  resetController(controller, isExiting) {
+  resetController(controller, isExiting, transition) {
     this._super(...arguments);
 
     if (isExiting) {

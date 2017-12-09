@@ -45,33 +45,40 @@ public class PinotSegmentToCsvConverter implements PinotSegmentConverter {
   }
 
   @Override
-  public void convert() throws Exception {
-    try (PinotSegmentRecordReader recordReader = new PinotSegmentRecordReader(new File(_segmentDir));
-        BufferedWriter recordWriter = new BufferedWriter(new FileWriter(_outputFile))) {
-      if (_withHeader) {
-        GenericRow row = recordReader.next();
-        recordWriter.write(StringUtils.join(row.getFieldNames(), _delimiter));
-        recordWriter.newLine();
-        recordReader.rewind();
-      }
+  public void convert()
+      throws Exception {
+    PinotSegmentRecordReader recordReader = new PinotSegmentRecordReader(new File(_segmentDir));
+    try {
+      recordReader.init();
 
-      while (recordReader.hasNext()) {
-        GenericRow row = recordReader.next();
-        String[] fields = row.getFieldNames();
-        List<String> record = new ArrayList<>(fields.length);
-
-        for (String field : fields) {
-          Object value = row.getValue(field);
-          if (value instanceof Object[]) {
-            record.add(StringUtils.join((Object[]) value, _listDelimiter));
-          } else {
-            record.add(value.toString());
-          }
+      try (BufferedWriter recordWriter = new BufferedWriter(new FileWriter(_outputFile))) {
+        if (_withHeader) {
+          GenericRow row = recordReader.next();
+          recordWriter.write(StringUtils.join(row.getFieldNames(), _delimiter));
+          recordWriter.newLine();
+          recordReader.rewind();
         }
 
-        recordWriter.write(StringUtils.join(record, _delimiter));
-        recordWriter.newLine();
+        while (recordReader.hasNext()) {
+          GenericRow row = recordReader.next();
+          String[] fields = row.getFieldNames();
+          List<String> record = new ArrayList<>(fields.length);
+
+          for (String field : fields) {
+            Object value = row.getValue(field);
+            if (value instanceof Object[]) {
+              record.add(StringUtils.join((Object[]) value, _listDelimiter));
+            } else {
+              record.add(value.toString());
+            }
+          }
+
+          recordWriter.write(StringUtils.join(record, _delimiter));
+          recordWriter.newLine();
+        }
       }
+    } finally {
+      recordReader.close();
     }
   }
 }

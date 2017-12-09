@@ -17,70 +17,88 @@ package com.linkedin.pinot.core.realtime.converter;
 
 import com.linkedin.pinot.common.data.Schema;
 import com.linkedin.pinot.core.data.GenericRow;
-import com.linkedin.pinot.core.data.readers.RecordReader;
+import com.linkedin.pinot.core.data.readers.BaseRecordReader;
 import com.linkedin.pinot.core.realtime.impl.RealtimeSegmentImpl;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
+// TODO Implement null counting if needed.
+public class RealtimeSegmentRecordReader extends BaseRecordReader {
 
-/**
- * Record reader for Pinot realtime segment.
- */
-public class RealtimeSegmentRecordReader implements RecordReader {
-  private final RealtimeSegmentImpl _realtimeSegment;
-  private final int _numDocs;
-  private final Schema _schema;
-  private final int[] _sortedDocIdIterationOrder;
+  private final Schema dataSchema;
+  private final List<String> columns;
 
-  private int _nextDocId = 0;
+  private RealtimeSegmentImpl realtimeSegment;
+  private int counter = 0;
+  private int[] sortedDocIdIterationOrder;
 
-  public RealtimeSegmentRecordReader(RealtimeSegmentImpl realtimeSegment, Schema schema) {
-    _realtimeSegment = realtimeSegment;
-    _numDocs = realtimeSegment.getAggregateDocumentCount();
-    _schema = schema;
-    _sortedDocIdIterationOrder = null;
+  RealtimeSegmentRecordReader(RealtimeSegmentImpl rtSegment, Schema schema) {
+    super();
+    super.initNullCounters(schema);
+    this.realtimeSegment = rtSegment;
+    this.dataSchema = schema;
+    this.columns = new ArrayList<>();
+    sortedDocIdIterationOrder = null;
   }
 
-  public RealtimeSegmentRecordReader(RealtimeSegmentImpl realtimeSegment, Schema schema, String sortedColumn) {
-    _realtimeSegment = realtimeSegment;
-    _numDocs = realtimeSegment.getAggregateDocumentCount();
-    _schema = schema;
-    _sortedDocIdIterationOrder = realtimeSegment.getSortedDocIdIterationOrderWithSortedColumn(sortedColumn);
+  RealtimeSegmentRecordReader(RealtimeSegmentImpl rtSegment, Schema schema, String sortedColumn) {
+    super();
+    super.initNullCounters(schema);
+    this.realtimeSegment = rtSegment;
+    this.dataSchema = schema;
+    columns = new ArrayList<>();
+    sortedDocIdIterationOrder = realtimeSegment.getSortedDocIdIterationOrderWithSortedColumn(sortedColumn);
   }
 
-  public int[] getSortedDocIdIterationOrder() {
-    return _sortedDocIdIterationOrder;
+  @Override
+  public void init() throws Exception {
+    columns.addAll(dataSchema.getDimensionNames());
+    columns.addAll(dataSchema.getMetricNames());
+    columns.add(dataSchema.getTimeFieldSpec().getOutgoingTimeColumnName());
+  }
+
+  @Override
+  public void rewind() throws Exception {
+    counter = 0;
   }
 
   @Override
   public boolean hasNext() {
-    return _nextDocId < _numDocs;
-  }
-
-  @Override
-  public GenericRow next() throws IOException {
-    return next(new GenericRow());
-  }
-
-  @Override
-  public GenericRow next(GenericRow reuse) throws IOException {
-    if (_sortedDocIdIterationOrder == null) {
-      return _realtimeSegment.getRawValueRowAt(_nextDocId++, reuse);
-    } else {
-      return _realtimeSegment.getRawValueRowAt(_sortedDocIdIterationOrder[_nextDocId++], reuse);
-    }
-  }
-
-  @Override
-  public void rewind() throws IOException {
-    _nextDocId = 0;
+    return counter < realtimeSegment.getAggregateDocumentCount();
   }
 
   @Override
   public Schema getSchema() {
-    return _schema;
+    return dataSchema;
+  }
+
+  public int[] getSortedDocIdIterationOrder() {
+    return sortedDocIdIterationOrder;
   }
 
   @Override
-  public void close() throws IOException {
+  public GenericRow next() {
+    return next(new GenericRow());
+  }
+
+  @Override
+  public GenericRow next(GenericRow row) {
+    final int index;
+
+    if (sortedDocIdIterationOrder == null) {
+      index = counter;
+    } else {
+      index = sortedDocIdIterationOrder[counter];
+    }
+
+    row = realtimeSegment.getRawValueRowAt(index, row);
+    counter++;
+    return row;
+  }
+
+  @Override
+  public void close() throws Exception {
+    realtimeSegment = null;
+    sortedDocIdIterationOrder = null;
   }
 }

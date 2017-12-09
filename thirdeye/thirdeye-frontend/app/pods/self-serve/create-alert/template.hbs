@@ -6,7 +6,7 @@
       <legend class="te-form__section-title">Metric Details</legend>
     </div>
     <div class="form-group col-xs-12 col-sm-8">
-      <div class="te-page__right te-page__right--inside">
+      <div class="te-page-right te-page-right--inside">
         {{#link-to "self-serve.import-metric" class="thirdeye-link-secondary thirdeye-link-secondary--inside"}}
           Import a Metric From InGraphs
         {{/link-to}}
@@ -92,18 +92,16 @@
         {{#if isMetricSelected}}
           {{anomaly-graph
             primaryMetric=selectedMetric
-            selectedDimensions=selectedDimensions
+            selectedDimensions=topDimensions
             dimensions=topDimensions
             showDimensions=true
             isLoading=loading
             showSubchart=true
-            showLegend=true
+            showLegend=false
+            legendText=legendText
             enableZoom=true
             componentId='create-alert'
             showGraphLegend=showGraphLegend
-            showGraphLegend=false
-            onSelection=(action "onSelection")
-            onPrimaryMetricToggle=(action "onPrimaryMetricToggle")
             height=400
           }}
           <div class="te-form__note">

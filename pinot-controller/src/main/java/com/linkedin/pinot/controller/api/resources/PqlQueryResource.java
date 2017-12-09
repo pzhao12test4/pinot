@@ -15,14 +15,6 @@
  */
 package com.linkedin.pinot.controller.api.resources;
 
-import com.linkedin.pinot.common.Utils;
-import com.linkedin.pinot.common.config.TableNameBuilder;
-import com.linkedin.pinot.common.exception.QueryException;
-import com.linkedin.pinot.common.request.BrokerRequest;
-import com.linkedin.pinot.controller.api.access.AccessControl;
-import com.linkedin.pinot.controller.api.access.AccessControlFactory;
-import com.linkedin.pinot.controller.helix.core.PinotHelixResourceManager;
-import com.linkedin.pinot.pql.parsers.Pql2Compiler;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,53 +28,46 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import org.apache.helix.model.InstanceConfig;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.linkedin.pinot.common.Utils;
+import com.linkedin.pinot.common.exception.QueryException;
+import com.linkedin.pinot.controller.helix.core.PinotHelixResourceManager;
+import com.linkedin.pinot.pql.parsers.Pql2Compiler;
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.QueryParam;
 
 
 @Path("/")
 public class PqlQueryResource {
-  private static final Logger LOGGER = LoggerFactory.getLogger(PqlQueryResource.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+      PqlQueryResource.class);
   private static final Pql2Compiler REQUEST_COMPILER = new Pql2Compiler();
   private static final Random RANDOM = new Random();
 
   @Inject
   PinotHelixResourceManager _pinotHelixResourceManager;
 
-  @Inject
-  AccessControlFactory _accessControlFactory;
-
-  @GET
   @Path("pql")
+  @GET
   public String get(
       @QueryParam("pql") String pqlQuery,
-      @QueryParam("trace") String traceEnabled,
-      @Context HttpHeaders httpHeaders) {
+      @QueryParam("trace") String traceEnabled
+  ) {
     try {
       LOGGER.debug("Trace: {}, Running query: {}", traceEnabled, pqlQuery);
 
       // Get resource table name.
-      BrokerRequest brokerRequest;
+      String tableName;
       try {
-        brokerRequest = REQUEST_COMPILER.compileToBrokerRequest(pqlQuery);
+        tableName = REQUEST_COMPILER.compileToBrokerRequest(pqlQuery).getQuerySource().getTableName();
       } catch (Exception e) {
         LOGGER.info("Caught exception while compiling PQL query: {}, {}", pqlQuery, e.getMessage());
         return QueryException.getException(QueryException.PQL_PARSING_ERROR, e).toString();
-      }
-      String tableName = TableNameBuilder.extractRawTableName(brokerRequest.getQuerySource().getTableName());
-
-      // Validate data access
-      AccessControl accessControl = _accessControlFactory.create();
-      if (!accessControl.hasDataAccess(httpHeaders, tableName)) {
-        return QueryException.ACCESS_DENIED_ERROR.toString();
       }
 
       // Get brokers for the resource table.

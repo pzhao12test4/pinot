@@ -45,11 +45,13 @@ public class OrOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds2));
     OrOperator orOperator = new OrOperator(operators);
 
+    orOperator.open();
     BlockDocIdIterator iterator = orOperator.nextBlock().getBlockDocIdSet().iterator();
     int docId;
     while ((docId = iterator.next()) != Constants.EOF) {
       Assert.assertEquals(docId, expectedIterator.next().intValue());
     }
+    orOperator.close();
   }
 
   @Test
@@ -69,11 +71,13 @@ public class OrOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds3));
     OrOperator orOperator = new OrOperator(operators);
 
+    orOperator.open();
     BlockDocIdIterator iterator = orOperator.nextBlock().getBlockDocIdSet().iterator();
     int docId;
     while ((docId = iterator.next()) != Constants.EOF) {
       Assert.assertEquals(docId, expectedIterator.next().intValue());
     }
+    orOperator.close();
   }
 
   @Test
@@ -97,10 +101,12 @@ public class OrOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds3));
     OrOperator orOperator = new OrOperator(operators);
 
+    orOperator.open();
     BlockDocIdIterator iterator = orOperator.nextBlock().getBlockDocIdSet().iterator();
     int docId;
     while ((docId = iterator.next()) != Constants.EOF) {
       Assert.assertEquals(docId, expectedIterator.next().intValue());
     }
+    orOperator.close();
   }
 }

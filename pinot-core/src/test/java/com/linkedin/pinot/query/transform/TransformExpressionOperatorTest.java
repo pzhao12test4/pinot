@@ -24,6 +24,7 @@ import com.linkedin.pinot.core.common.BlockValSet;
 import com.linkedin.pinot.core.common.Operator;
 import com.linkedin.pinot.core.data.GenericRow;
 import com.linkedin.pinot.core.data.readers.FileFormat;
+import com.linkedin.pinot.core.data.readers.RecordReader;
 import com.linkedin.pinot.core.indexsegment.IndexSegment;
 import com.linkedin.pinot.core.indexsegment.generator.SegmentGeneratorConfig;
 import com.linkedin.pinot.core.operator.BReusableFilteredDocIdSetOperator;
@@ -41,7 +42,7 @@ import com.linkedin.pinot.core.plan.DocIdSetPlanNode;
 import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
 import com.linkedin.pinot.core.segment.index.loader.Loaders;
 import com.linkedin.pinot.pql.parsers.Pql2Compiler;
-import com.linkedin.pinot.util.GenericRowRecordReader;
+import com.linkedin.pinot.util.TestUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -132,9 +133,12 @@ public class TransformExpressionOperatorTest {
 
     TransformExpressionOperator transformOperator =
         new TransformExpressionOperator(projectionOperator, expressionTrees);
+    transformOperator.open();
     TransformBlock transformBlock = transformOperator.nextBlock();
     BlockValSet blockValueSet = transformBlock.getBlockValueSet(expression);
-    return blockValueSet.getDoubleValuesSV();
+    double[] actual = blockValueSet.getDoubleValuesSV();
+    transformOperator.close();
+    return actual;
   }
 
   /**
@@ -156,10 +160,10 @@ public class TransformExpressionOperatorTest {
     config.setSegmentName(segmentName);
 
     Random random = new Random(RANDOM_SEED);
+    final List<GenericRow> data = new ArrayList<>();
 
-    List<GenericRow> rows = new ArrayList<>(NUM_ROWS);
     _values = new double[NUM_ROWS][NUM_METRICS];
-    for (int rowId = 0; rowId < NUM_ROWS; rowId++) {
+    for (int row = 0; row < NUM_ROWS; row++) {
       HashMap<String, Object> map = new HashMap<>();
 
       // Metric columns.
@@ -167,16 +171,17 @@ public class TransformExpressionOperatorTest {
         String metName = schema.getMetricFieldSpecs().get(i).getName();
         double value = random.nextInt(MAX_METRIC_VALUE) + random.nextDouble() + 1.0;
         map.put(metName, value);
-        _values[rowId][i] = value;
+        _values[row][i] = value;
       }
 
       GenericRow genericRow = new GenericRow();
       genericRow.init(map);
-      rows.add(genericRow);
+      data.add(genericRow);
     }
 
     SegmentIndexCreationDriverImpl driver = new SegmentIndexCreationDriverImpl();
-    driver.init(config, new GenericRowRecordReader(rows, schema));
+    RecordReader reader = new TestUtils.GenericRowRecordReader(schema, data);
+    driver.init(config, reader);
     driver.build();
 
     LOGGER.info("Built segment {} at {}", segmentName, segmentDirName);

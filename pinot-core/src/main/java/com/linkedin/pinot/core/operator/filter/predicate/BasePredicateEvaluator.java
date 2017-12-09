@@ -15,10 +15,14 @@
  */
 package com.linkedin.pinot.core.operator.filter.predicate;
 
+import com.linkedin.pinot.core.common.Predicate;
+
+
 public abstract class BasePredicateEvaluator implements PredicateEvaluator {
 
   @Override
   public final boolean isExclusive() {
-    return getPredicateType().isExclusive();
+    Predicate.Type predicateType = getPredicateType();
+    return predicateType == Predicate.Type.NEQ || predicateType == Predicate.Type.NOT_IN;
   }
 }

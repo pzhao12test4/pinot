@@ -1,4 +1,5 @@
 import Ember from 'ember';
+import moment from 'moment';
 import { Actions } from 'thirdeye-frontend/actions/dimensions';
 
 export default Ember.Route.extend({

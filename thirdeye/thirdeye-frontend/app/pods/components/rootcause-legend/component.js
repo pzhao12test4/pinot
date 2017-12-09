@@ -1,5 +1,6 @@
 import Ember from 'ember';
-import { toCurrentUrn, toBaselineUrn, filterPrefix, stripTail, hasPrefix, toFilters, toEntities, toMetricLabel } from '../../../helpers/utils';
+import { toCurrentUrn, toBaselineUrn, filterPrefix, stripTail, hasPrefix } from '../../../helpers/utils';
+import _ from 'lodash';
 
 export default Ember.Component.extend({
   entities: null, // {}
@@ -12,14 +13,12 @@ export default Ember.Component.extend({
 
   onSelection: null, // function (Set, bool)
 
-  classNames: ['rootcause-legend'],
-
   validUrns: Ember.computed(
     'entities',
     'selectedUrns',
     function () {
       const { entities, selectedUrns } = this.getProperties('entities', 'selectedUrns');
-      return filterPrefix(selectedUrns, 'thirdeye:').filter(urn => entities[urn] || urn.startsWith('thirdeye:metric:'));
+      return filterPrefix(selectedUrns, 'thirdeye:').filter(urn => entities[urn] || entities[stripTail(urn)]);
     }
   ),
 
@@ -27,43 +26,20 @@ export default Ember.Component.extend({
     'entities',
     'validUrns',
     function () {
-      const { validUrns, entities } = this.getProperties('validUrns', 'entities');
+      const { validUrns } = this.getProperties('validUrns');
       return filterPrefix(validUrns, 'thirdeye:metric:').reduce((agg, urn) => {
-        agg[urn] = toMetricLabel(urn, entities);
+        agg[urn] = this._makeMetricLabel(urn);
         return agg;
       }, {});
     }
   ),
 
-  /**
-   * Parses the validUrns and builds out 
-   * a Mapping of event Types to a mapping of urns
-   * @type {Objectgit sta}
-   */
   events: Ember.computed(
     'entities',
     'validUrns',
     function () {
       const { entities, validUrns } = this.getProperties('entities', 'validUrns');
-      return filterPrefix(validUrns, 'thirdeye:event:')
-        .reduce((agg, urn) => { 
-          const type = urn.split(':')[2];
-          agg[type] = agg[type] || {};
-          Object.assign(agg[type], {
-            [urn]: entities[urn].label
-          });
-
-          return agg;
-        }, {});
-    }
-  ),
-
-  colors: Ember.computed(
-    'entities',
-    'validUrns',
-    function () {
-      const { entities, validUrns } = this.getProperties('entities', 'validUrns');
-      return validUrns.filter(urn => entities[stripTail(urn)]).reduce((agg, urn) => { agg[urn] = entities[stripTail(urn)].color; return agg; }, {});
+      return filterPrefix(validUrns, 'thirdeye:event:').reduce((agg, urn) => { agg[urn] = entities[urn].label; return agg; }, {});
     }
   ),
 
@@ -89,6 +65,20 @@ export default Ember.Component.extend({
     if (onVisibility) {
       onVisibility(updates);
     }
+  },
+
+  _makeMetricLabel(urn) {
+    const { entities } = this.getProperties('entities');
+
+    const metricName = entities[stripTail(urn)].label.split("::")[1];
+    const parts = urn.split(':');
+
+    if (parts.length <= 3) {
+      return metricName;
+    }
+
+    const tail = _.slice(parts, 3);
+    return metricName + ' (' + tail.join(', ') + ')';
   },
 
   actions: {

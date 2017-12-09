@@ -15,17 +15,13 @@
  */
 package com.linkedin.pinot.common.data;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
 
 
-@SuppressWarnings("unused")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StarTreeIndexSpec {
   public static final Integer DEFAULT_MAX_LEAF_RECORDS = 100000; // TODO: determine a good number via experiment
@@ -44,13 +40,7 @@ public class StarTreeIndexSpec {
 
   private boolean _excludeSkipMaterializationDimensionsForStarTreeIndex;
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
   public StarTreeIndexSpec() {
-  }
-
-  public static StarTreeIndexSpec fromJsonString(String jsonString) throws Exception {
-    return OBJECT_MAPPER.readValue(jsonString, StarTreeIndexSpec.class);
   }
 
   public Integer getMaxLeafRecords() {
@@ -105,21 +95,5 @@ public class StarTreeIndexSpec {
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
-  }
-
-  public String toJsonString() throws Exception {
-    return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(this);
-  }
-
-  /**
-   * Builds and returns StarTreeIndexSpec from specified file.
-   *
-   * @param starTreeIndexSpecFile File containing star tree index spec.
-   * @return StarTreeIndexSpec object de-serialized from the file.
-   * @throws IOException
-   */
-  public static StarTreeIndexSpec fromFile(File starTreeIndexSpecFile)
-      throws IOException {
-    return OBJECT_MAPPER.readValue(starTreeIndexSpecFile, StarTreeIndexSpec.class);
   }
 }
