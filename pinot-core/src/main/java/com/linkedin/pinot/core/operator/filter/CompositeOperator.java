@@ -15,36 +15,47 @@
  */
 package com.linkedin.pinot.core.operator.filter;
 
+import com.linkedin.pinot.core.common.Operator;
 import com.linkedin.pinot.core.operator.blocks.BaseFilterBlock;
-import com.linkedin.pinot.core.operator.blocks.MatchEntireSegmentDocIdSetBlock;
+import com.linkedin.pinot.core.operator.blocks.CompositeBaseFilterBlock;
+import java.util.ArrayList;
+import java.util.List;
 
+public class CompositeOperator extends BaseFilterOperator{
+  private static final String OPERATOR_NAME = "CompositeOperator";
+  private List<BaseFilterOperator> operators;
 
-public class MatchEntireSegmentOperator extends BaseFilterOperator {
-  private static final String OPERATOR_NAME = "MatchEntireSegmentOperator";
-  private int _totalDocs;
-
-  public MatchEntireSegmentOperator(int totalDocs) {
-    _totalDocs = totalDocs;
+  public CompositeOperator(List<BaseFilterOperator> operators) {
+    this.operators = operators;
   }
 
   @Override
   public boolean open() {
-    return true;
+    return false;
   }
 
   @Override
   public boolean close() {
-    return true;
+    return false;
   }
 
   @Override
   protected BaseFilterBlock getNextBlock() {
-    return new MatchEntireSegmentDocIdSetBlock(_totalDocs);
+    List<BaseFilterBlock> blocks = new ArrayList<>();
+    for(Operator operator:operators){
+      blocks.add((BaseFilterBlock) operator.nextBlock());
+    }
+    return new CompositeBaseFilterBlock(blocks);
   }
 
   @Override
   public boolean isResultEmpty() {
-    return false;
+    for (BaseFilterOperator operator : operators) {
+      if (!operator.isResultEmpty()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

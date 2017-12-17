@@ -59,6 +59,12 @@ public class BReusableFilteredDocIdSetOperator extends BaseOperator<DocIdSetBloc
   }
 
   @Override
+  public boolean open() {
+    _filterOperator.open();
+    return true;
+  }
+
+  @Override
   protected DocIdSetBlock getNextBlock() {
     // Handle limit 0 clause safely.
     // For limit 0, _docIdArray will be zero sized
@@ -89,6 +95,12 @@ public class BReusableFilteredDocIdSetOperator extends BaseOperator<DocIdSetBloc
   @Override
   public String getOperatorName() {
     return OPERATOR_NAME;
+  }
+
+  @Override
+  public boolean close() {
+    _filterOperator.close();
+    return true;
   }
 
   @Override

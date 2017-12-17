@@ -31,15 +31,12 @@ public class BitmapBasedFilterOperator extends BaseFilterOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(BitmapBasedFilterOperator.class);
   private static final String OPERATOR_NAME = "BitmapBasedFilterOperator";
 
+  private final PredicateEvaluator _predicateEvaluator;
+  private final DataSource _dataSource;
   private final int _startDocId;
   // TODO: change it to exclusive
   // Inclusive
   private final int _endDocId;
-  private final boolean _exclusive;
-
-  private PredicateEvaluator _predicateEvaluator;
-  private DataSource _dataSource;
-  private ImmutableRoaringBitmap[] _bitmaps;
 
   public BitmapBasedFilterOperator(PredicateEvaluator predicateEvaluator, DataSource dataSource, int startDocId,
       int endDocId) {
@@ -47,23 +44,17 @@ public class BitmapBasedFilterOperator extends BaseFilterOperator {
     _dataSource = dataSource;
     _startDocId = startDocId;
     _endDocId = endDocId;
-    _exclusive = predicateEvaluator.isExclusive();
   }
 
-  public BitmapBasedFilterOperator(ImmutableRoaringBitmap[] bitmaps, int startDocId, int endDocId, boolean exclusive) {
-    _bitmaps = bitmaps;
-    _startDocId = startDocId;
-    _endDocId = endDocId;
-    _exclusive = exclusive;
+  @Override
+  public boolean open() {
+    return _dataSource.open();
   }
 
   @Override
   protected BaseFilterBlock getNextBlock() {
-    if (_bitmaps != null) {
-      return new BitmapBlock(_bitmaps, _startDocId, _endDocId, _exclusive);
-    }
-
-    int[] dictIds = _exclusive ? _predicateEvaluator.getNonMatchingDictIds() : _predicateEvaluator.getMatchingDictIds();
+    boolean exclusive = _predicateEvaluator.isExclusive();
+    int[] dictIds = exclusive ? _predicateEvaluator.getNonMatchingDictIds() : _predicateEvaluator.getMatchingDictIds();
 
     // For realtime use case, it is possible that inverted index has not yet generated for the given dict id, so we
     // filter out null bitmaps
@@ -83,12 +74,18 @@ public class BitmapBasedFilterOperator extends BaseFilterOperator {
       LOGGER.info("Not all inverted indexes are generated, numDictIds: {}, numBitmaps: {}", length, numBitmaps);
     }
 
-    return new BitmapBlock(bitmaps.toArray(new ImmutableRoaringBitmap[numBitmaps]), _startDocId, _endDocId, _exclusive);
+    return new BitmapBlock(_dataSource.getOperatorName(), _dataSource.nextBlock().getMetadata(), _startDocId, _endDocId,
+        bitmaps.toArray(new ImmutableRoaringBitmap[numBitmaps]), exclusive);
   }
 
   @Override
   public boolean isResultEmpty() {
-    return _predicateEvaluator != null && _predicateEvaluator.isAlwaysFalse();
+    return _predicateEvaluator.isAlwaysFalse();
+  }
+
+  @Override
+  public boolean close() {
+    return _dataSource.close();
   }
 
   @Override

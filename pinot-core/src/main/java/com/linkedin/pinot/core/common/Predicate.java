@@ -15,6 +15,9 @@
  */
 package com.linkedin.pinot.core.common;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.linkedin.pinot.common.request.FilterOperator;
 import com.linkedin.pinot.common.utils.request.FilterQueryTree;
 import com.linkedin.pinot.core.common.predicate.EqPredicate;
@@ -23,8 +26,6 @@ import com.linkedin.pinot.core.common.predicate.NEqPredicate;
 import com.linkedin.pinot.core.common.predicate.NotInPredicate;
 import com.linkedin.pinot.core.common.predicate.RangePredicate;
 import com.linkedin.pinot.core.common.predicate.RegexpLikePredicate;
-import java.util.Arrays;
-import java.util.List;
 
 
 public abstract class Predicate {
@@ -35,12 +36,8 @@ public abstract class Predicate {
     REGEXP_LIKE,
     RANGE,
     IN,
-    NOT_IN;
-
-    public boolean isExclusive() {
-      return this == NEQ || this == NOT_IN;
-    }
-  }
+    NOT_IN
+  };
 
   private final String lhs;
   private final List<String> rhs;

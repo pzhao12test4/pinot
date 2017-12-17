@@ -49,6 +49,11 @@ public class SortedInvertedIndexBasedFilterOperator extends BaseFilterOperator {
   }
 
   @Override
+  public boolean open() {
+    return _dataSource.open();
+  }
+
+  @Override
   protected BaseFilterBlock getNextBlock() {
     SortedIndexReader invertedIndex = (SortedIndexReader) _dataSource.getInvertedIndex();
     List<IntPair> pairs = new ArrayList<>();
@@ -153,6 +158,11 @@ public class SortedInvertedIndexBasedFilterOperator extends BaseFilterOperator {
   @Override
   public boolean isResultEmpty() {
     return _predicateEvaluator.isAlwaysFalse();
+  }
+
+  @Override
+  public boolean close() {
+    return _dataSource.close();
   }
 
   @Override

@@ -34,6 +34,12 @@ public class UResultOperator extends BaseOperator<InstanceResponseBlock> {
   }
 
   @Override
+  public boolean open() {
+    _operator.open();
+    return true;
+  }
+
+  @Override
   protected InstanceResponseBlock getNextBlock() {
     return new InstanceResponseBlock(_operator.nextBlock());
   }
@@ -41,5 +47,11 @@ public class UResultOperator extends BaseOperator<InstanceResponseBlock> {
   @Override
   public String getOperatorName() {
     return OPERATOR_NAME;
+  }
+
+  @Override
+  public boolean close() {
+    _operator.close();
+    return true;
   }
 }

@@ -126,6 +126,7 @@ public class FilterOperatorBenchmark {
       start = System.currentTimeMillis();
       FilterPlanNode planNode = new FilterPlanNode(indexSegmentImpl, brokerRequest);
       Operator filterOperator = planNode.run();
+      filterOperator.open();
       Block block = filterOperator.nextBlock();
       BlockDocIdSet filteredDocIdSet = block.getBlockDocIdSet();
       BlockDocIdIterator iterator = filteredDocIdSet.iterator();
@@ -151,6 +152,7 @@ public class FilterOperatorBenchmark {
 
       end = System.currentTimeMillis();
       timesSpent[id] = (end - start);
+      filterOperator.close();
       totalDocsMatched.addAndGet(matchedCount);
       return null;
     }
