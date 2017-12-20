@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.plan;
 
+import com.linkedin.pinot.core.common.Operator;
 import com.linkedin.pinot.core.operator.UResultOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public class InstanceResponsePlanNode implements PlanNode {
   }
 
   @Override
-  public UResultOperator run() {
+  public Operator run() {
     long start = System.currentTimeMillis();
     UResultOperator uResultOperator = new UResultOperator(_combinePlanNode.run());
     long end = System.currentTimeMillis();

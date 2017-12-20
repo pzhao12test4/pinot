@@ -38,10 +38,12 @@ public class AndOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds2));
     AndOperator andOperator = new AndOperator(operators);
 
+    andOperator.open();
     BlockDocIdIterator iterator = andOperator.nextBlock().getBlockDocIdSet().iterator();
     Assert.assertEquals(iterator.next(), 3);
     Assert.assertEquals(iterator.next(), 28);
     Assert.assertEquals(iterator.next(), Constants.EOF);
+    andOperator.close();
   }
 
   @Test
@@ -56,10 +58,12 @@ public class AndOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds3));
     AndOperator andOperator = new AndOperator(operators);
 
+    andOperator.open();
     BlockDocIdIterator iterator = andOperator.nextBlock().getBlockDocIdSet().iterator();
     Assert.assertEquals(iterator.next(), 3);
     Assert.assertEquals(iterator.next(), 6);
     Assert.assertEquals(iterator.next(), Constants.EOF);
+    andOperator.close();
   }
 
   @Test
@@ -78,10 +82,12 @@ public class AndOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds3));
     AndOperator andOperator = new AndOperator(operators);
 
+    andOperator.open();
     BlockDocIdIterator iterator = andOperator.nextBlock().getBlockDocIdSet().iterator();
     Assert.assertEquals(iterator.next(), 3);
     Assert.assertEquals(iterator.next(), 6);
     Assert.assertEquals(iterator.next(), Constants.EOF);
+    andOperator.close();
   }
 
   @Test
@@ -100,11 +106,13 @@ public class AndOperatorTest {
     operators.add(FilterOperatorTestUtils.makeFilterOperator(docIds1));
     AndOperator andOperator = new AndOperator(operators);
 
+    andOperator.open();
     BlockDocIdIterator iterator = andOperator.nextBlock().getBlockDocIdSet().iterator();
     Assert.assertEquals(iterator.next(), 2);
     Assert.assertEquals(iterator.next(), 3);
     Assert.assertEquals(iterator.next(), 6);
     Assert.assertEquals(iterator.next(), 28);
     Assert.assertEquals(iterator.next(), Constants.EOF);
+    andOperator.close();
   }
 }

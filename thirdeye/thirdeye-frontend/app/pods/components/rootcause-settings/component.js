@@ -51,16 +51,6 @@ export default Ember.Component.extend({
 
 
   /**
-   * Formatted max date
-   * @return {String}
-   */
-  datePickerMaxDate: Ember.computed({
-    get() {
-      return moment().endOf('day');
-    }
-  }),
-
-  /**
    * Formatted anomaly start date
    * @return {String}
    */
@@ -68,7 +58,7 @@ export default Ember.Component.extend({
     get() {
       const start = this.get('anomalyRangeStart');
 
-      return moment(start).format(serverDateFormat);
+      return start ? moment(+start).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
 
@@ -80,7 +70,7 @@ export default Ember.Component.extend({
     get() {
       const end = this.get('anomalyRangeEnd');
 
-      return moment(end).format(serverDateFormat);
+      return end ? moment(+end).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
 
@@ -92,7 +82,7 @@ export default Ember.Component.extend({
     get() {
       const start = this.get('analysisRangeStart');
 
-      return moment(start).format(serverDateFormat);
+      return start ? moment(+start).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
 
@@ -104,7 +94,7 @@ export default Ember.Component.extend({
     get() {
       const end = this.get('analysisRangeEnd');
 
-      return moment(end).format(serverDateFormat);
+      return end ? moment(+end).format(serverDateFormat) : moment().format(serverDateFormat);
     }
   }),
 
@@ -112,7 +102,7 @@ export default Ember.Component.extend({
    * Selected Granularity
    * @type {String}
    */
-  granularity: '1_HOURS',
+  granularity: null,
 
   /**
    * Granularities Options
@@ -143,17 +133,13 @@ export default Ember.Component.extend({
    * @type {Object}
    */
   predefinedAnalysisRanges: {
-    'Last 3 days': [
-      moment().subtract(2, 'days').startOf('day'),
-      moment().endOf('day')
+    'Last 2 days': [
+      moment().subtract(3, 'days').startOf('day'),
+      moment().subtract(1, 'days').endOf('day')
     ],
     'Last 7 days': [
-      moment().subtract(6, 'days').startOf('day'),
-      moment().endOf('day')
-    ],
-    'Last 14 days': [
-      moment().subtract(13, 'days').startOf('day'),
-      moment().endOf('day')
+      moment().subtract(7, 'days').startOf('day'),
+      moment().subtract(1, 'days').endOf('day')
     ]
   },
 
@@ -181,6 +167,41 @@ export default Ember.Component.extend({
   }),
 
   /**
+   * Indicates the date format to be used based on granularityUnit
+   * @type {String}
+   */
+  uiDateFormat: Ember.computed('granularityUnit', function () {
+    const granularityUnit = this.get('granularityUnit');
+
+    switch (granularityUnit) {
+      case 'DAYS':
+        return 'MMM D, YYYY';
+      case 'HOURS':
+        return 'MMM D, YYYY h a';
+      default:
+        return 'MMM D, YYYY hh:mm a';
+    }
+  }),
+
+  /**
+   * Indicates the allowed date range picker increment based on granularityUnit
+   * @type {Number}
+   */
+  timePickerIncrement: Ember.computed('granularityUnit', function () {
+    const granularityUnit = this.get('granularityUnit');
+
+    switch (granularityUnit) {
+      case 'DAYS':
+        return 1440;
+      case 'HOURS':
+        return 60;
+      default:
+        return 5;
+    }
+  }),
+
+
+  /**
    * Parses the context and sets component's props
    */
   _updateFromContext() {
@@ -206,7 +227,19 @@ export default Ember.Component.extend({
     });
   },
 
+  init() {
+    this._super(...arguments);
+
+    this._updateFromContext();
+  },
+
   didReceiveAttrs() {
+    this._super(...arguments);
+
+    this._updateFromContext();
+  },
+
+  didInsertElement() {
     this._super(...arguments);
 
     this._updateFromContext();
@@ -277,7 +310,7 @@ export default Ember.Component.extend({
      */
     setDisplayDateRange(start, end) {
       const analysisRangeStart = moment(start).valueOf();
-      const analysisRangeEnd = moment(end).endOf('day').valueOf();
+      const analysisRangeEnd = moment(end).valueOf();
 
       this.setProperties({
         analysisRangeStart,

@@ -70,7 +70,6 @@ public class StarTreeDataTable implements Closeable {
    * Sort the documents inside the data buffer based on the sort order.
    * <p>To reduce the number of swaps inside the data buffer, we first sort on an array which only read from the data
    * buffer, then re-arrange the actual document inside the data buffer based on the sorted array.
-   * <p>This method may change the data, call {@link #flush()} before closing the data table.
    *
    * @param startDocId Start document id of the range to be sorted
    * @param endDocId End document id (exclusive) of the range to be sorted
@@ -156,6 +155,9 @@ public class StarTreeDataTable implements Closeable {
           sortedDocIds[currentIndex] = currentDocId;
         }
       }
+      if (_dataBuffer instanceof MMapBuffer) {
+        ((MMapBuffer) _dataBuffer).flush();
+      }
     } finally {
       docBuffer.release();
     }
@@ -226,7 +228,6 @@ public class StarTreeDataTable implements Closeable {
 
   /**
    * Set the value for each document at the specified index to the specified value.
-   * <p>This method may change the data, call {@link #flush()} before closing the data table.
    *
    * @param dimensionId Index of the dimension to set the value
    * @param value Value to be set
@@ -236,12 +237,24 @@ public class StarTreeDataTable implements Closeable {
     for (int i = 0; i < numDocs; i++) {
       _dataBuffer.putInt(i * _docSize + dimensionId * V1Constants.Numbers.INTEGER_SIZE, value);
     }
+    if (_dataBuffer instanceof MMapBuffer) {
+      ((MMapBuffer) _dataBuffer).flush();
+    }
   }
 
   /**
-   * Flush any changes made to the data buffer to the disk if necessary (no-op if data buffer is LBuffer).
+   * Set the value for each document at the specified indexes to the specified value.
+   *
+   * @param dimensionIds Array of dimension ids to set the value
+   * @param value Value to be set
    */
-  public void flush() {
+  public void setDimensionValue(int[] dimensionIds, int value) {
+    int numDocs = _endDocId - _startDocId;
+    for (int i = 0; i < numDocs; i++) {
+      for (int dimensionId : dimensionIds) {
+        _dataBuffer.putInt(i * _docSize + dimensionId * V1Constants.Numbers.INTEGER_SIZE, value);
+      }
+    }
     if (_dataBuffer instanceof MMapBuffer) {
       ((MMapBuffer) _dataBuffer).flush();
     }
