@@ -69,6 +69,16 @@ public class TransformExpressionOperator extends BaseOperator<TransformBlock> {
   }
 
   @Override
+  public boolean open() {
+    return _projectionOperator.open();
+  }
+
+  @Override
+  public boolean close() {
+    return _projectionOperator.close();
+  }
+
+  @Override
   public ExecutionStatistics getExecutionStatistics() {
     return _projectionOperator.getExecutionStatistics();
   }

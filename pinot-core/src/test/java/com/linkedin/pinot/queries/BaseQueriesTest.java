@@ -84,7 +84,8 @@ public abstract class BaseQueriesTest {
 
     // Server side.
     Plan plan = PLAN_MAKER.makeInterSegmentPlan(getSegmentDataManagers(), brokerRequest, EXECUTOR_SERVICE, 10_000);
-    DataTable instanceResponse = plan.execute();
+    plan.execute();
+    DataTable instanceResponse = plan.getInstanceResponse();
 
     // Broker side.
     BrokerReduceService brokerReduceService = new BrokerReduceService();

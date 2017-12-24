@@ -44,12 +44,11 @@ public class StarTreeQueryGenerator {
   private static final String GROUP_BY = " GROUP BY ";
   private static final String BETWEEN = " BETWEEN ";
   private static final String IN = " IN ";
-  private static final String NOT_IN = " NOT IN ";
   private static final String AND = " AND ";
 
-  private static final int MAX_NUM_AGGREGATIONS = 5;
-  private static final int MAX_NUM_PREDICATES = 10;
-  private static final int MAX_NUM_GROUP_BYS = 3;
+  private static final int MAX_NUM_AGGREGATIONS = 3;
+  private static final int MAX_NUM_PREDICATES = 3;
+  private static final int MAX_NUM_GROUP_BYS = 2;
   private static final int MAX_NUM_IN_VALUES = 5;
   private static final int SHUFFLE_THRESHOLD = 5 * MAX_NUM_IN_VALUES;
   private static final Random RANDOM = new Random();
@@ -170,12 +169,7 @@ public class StarTreeQueryGenerator {
    * @return in predicate.
    */
   private StringBuilder generateInPredicate(String dimensionColumn) {
-    StringBuilder stringBuilder = new StringBuilder(dimensionColumn);
-    if (RANDOM.nextBoolean()) {
-      stringBuilder.append(IN).append('(');
-    } else {
-      stringBuilder.append(NOT_IN).append('(');
-    }
+    StringBuilder stringBuilder = new StringBuilder(dimensionColumn).append(IN).append('(');
 
     List<Object> valueArray = _singleValueDimensionValuesMap.get(dimensionColumn);
     int size = valueArray.size();
@@ -225,7 +219,7 @@ public class StarTreeQueryGenerator {
    * @return all predicates.
    */
   private StringBuilder generatePredicates() {
-    int numPredicates = RANDOM.nextInt(MAX_NUM_PREDICATES + 1);
+    int numPredicates = Math.min(RANDOM.nextInt(MAX_NUM_PREDICATES + 1), _singleValueDimensionColumns.size());
     if (numPredicates == 0) {
       return null;
     }
@@ -236,7 +230,7 @@ public class StarTreeQueryGenerator {
       if (i != 0) {
         stringBuilder.append(AND);
       }
-      String dimensionName = _singleValueDimensionColumns.get(RANDOM.nextInt(numPredicates));
+      String dimensionName = _singleValueDimensionColumns.get(i);
       switch (RANDOM.nextInt(3)) {
         case 0:
           stringBuilder.append(generateComparisonPredicate(dimensionName));
@@ -259,14 +253,14 @@ public class StarTreeQueryGenerator {
    * @return group by section.
    */
   private StringBuilder generateGroupBys() {
-    int numGroupBys = Math.min(RANDOM.nextInt(MAX_NUM_GROUP_BYS + 1), _singleValueDimensionColumns.size());
-    if (numGroupBys == 0) {
+    int numPredicates = Math.min(RANDOM.nextInt(MAX_NUM_GROUP_BYS + 1), _singleValueDimensionColumns.size());
+    if (numPredicates == 0) {
       return null;
     }
 
     StringBuilder stringBuilder = new StringBuilder(GROUP_BY);
     Collections.shuffle(_singleValueDimensionColumns);
-    for (int i = 0; i < numGroupBys; i++) {
+    for (int i = 0; i < numPredicates; i++) {
       if (i != 0) {
         stringBuilder.append(',').append(' ');
       }
@@ -343,8 +337,9 @@ public class StarTreeQueryGenerator {
 
       // Verify that query is fit for star tree.
       BrokerRequest brokerRequest = compiler.compileToBrokerRequest(query);
-      Preconditions.checkState(RequestUtils.isFitForStarTreeIndex(segmentMetadata, brokerRequest,
-          RequestUtils.generateFilterQueryTree(brokerRequest)));
+      Preconditions.checkState(
+          RequestUtils.isFitForStarTreeIndex(segmentMetadata, RequestUtils.generateFilterQueryTree(brokerRequest),
+              brokerRequest));
     }
   }
 }

@@ -166,30 +166,26 @@ export default Ember.Controller.extend({
   ),
 
   isLoadingEntities: Ember.computed(
-    'entitiesService.pending',
+    'entitiesService.entities',
     function () {
+      console.log('isLoadingEntities()');
       return this.get('entitiesService.pending').size > 0;
     }
   ),
 
   isLoadingTimeseries: Ember.computed(
-    'timeseriesService.pending',
+    'timeseriesService.timeseries',
     function () {
+      console.log('isLoadingTimeseries()');
       return this.get('timeseriesService.pending').size > 0;
     }
   ),
 
   isLoadingAggregates: Ember.computed(
-    'aggregatesService.pending',
+    'aggregatesService.aggregates',
     function () {
-      return this.get('aggregatesService.pending').size > 0;
-    }
-  ),
-
-  isLoadingBreakdowns: Ember.computed(
-    'breakdownsService.pending',
-    function () {
-      return this.get('breakdownsService.pending').size > 0;
+      console.log('isLoadingAggregates()');
+      return this.get('aggregatesService.aggregates').size > 0;
     }
   ),
 
@@ -239,13 +235,7 @@ export default Ember.Controller.extend({
     loadtestSelectedUrns() {
       console.log('loadtestSelected()');
       const { entities } = this.getProperties('entities');
-
-      const entityUrns = Object.keys(entities);
-      const metricUrns = filterPrefix(entityUrns, 'thirdeye:metric:');
-      const baselineUrns = metricUrns.map(toBaselineUrn);
-      const currentUrns = metricUrns.map(toCurrentUrn);
-
-      this.set('selectedUrns', new Set([...entityUrns, ...baselineUrns, ...currentUrns]));
+      this.set('selectedUrns', new Set(Object.keys(entities)));
     },
 
     addSelectedUrns(urns) {

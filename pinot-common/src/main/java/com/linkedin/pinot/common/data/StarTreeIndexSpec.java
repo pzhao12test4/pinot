@@ -20,7 +20,6 @@ import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
 
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -41,13 +40,7 @@ public class StarTreeIndexSpec {
 
   private boolean _excludeSkipMaterializationDimensionsForStarTreeIndex;
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
   public StarTreeIndexSpec() {
-  }
-
-  public static StarTreeIndexSpec fromJsonString(String jsonString) throws Exception {
-    return OBJECT_MAPPER.readValue(jsonString, StarTreeIndexSpec.class);
   }
 
   public Integer getMaxLeafRecords() {
@@ -102,9 +95,5 @@ public class StarTreeIndexSpec {
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
-  }
-
-  public String toJsonString() throws Exception {
-    return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(this);
   }
 }

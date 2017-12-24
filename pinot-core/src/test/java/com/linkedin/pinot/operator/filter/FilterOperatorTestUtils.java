@@ -85,6 +85,16 @@ public class FilterOperatorTestUtils {
       public String getOperatorName() {
         return null;
       }
+
+      @Override
+      public boolean open() {
+        return true;
+      }
+
+      @Override
+      public boolean close() {
+        return true;
+      }
     };
   }
 }

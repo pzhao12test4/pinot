@@ -13,15 +13,16 @@
           </label>
           {{date-range-picker
             class="te-range-picker"
-            timePicker=true
+            timePicker=showTimePicker
             timePicker24Hour=true
-            timePickerIncrement=5
+            timePickerIncrement=timePickerIncrement
+            minDate=minDate
+            maxDate=maxDate
             start=datePickerAnomalyRangeStart
             end=datePickerAnomalyRangeEnd
-            maxDate=datePickerMaxDate
             ranges=anomalyRanges
             showCustomRangeLabel=false
-            format="MMM D, YYYY hh:mm a"
+            format=uiDateFormat
             serverFormat="YYYY-MM-DD HH:mm"
             applyAction=(action "setAnomalyDateRange")
           }}
@@ -65,12 +66,15 @@
           </label>
           {{date-range-picker
             class="te-range-picker"
-            start=datePickerAnalysisRangeStart
-            end=datePickerAnalysisRangeEnd
-            maxDate=datePickerMaxDate
+            timePicker=showTimePicker
+            timePicker24Hour=true
+            timePickerIncrement=timePickerIncrement
+            maxDate=maxTime
+            start=viewRegionStart
+            end=viewRegionEnd
             ranges=predefinedAnalysisRanges
             showCustomRangeLabel=false
-            format="MMM D, YYYY"
+            format=uiDateFormat
             serverFormat="YYYY-MM-DD HH:mm"
             applyAction=(action "setDisplayDateRange")
           }}
